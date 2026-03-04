@@ -119,7 +119,6 @@
         .lang-btn { flex: 1; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-alpha); border-radius: 10px; font-size: 10px; font-weight: 900; }
         .lang-btn.active { background: var(--app-accent); color: #000; border-color: var(--app-accent); }
 
-        /* Tabs Favoritos */
         .tabs-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 16px; margin-bottom: 24px; }
         .tab-trigger { flex: 1; padding: 10px; border-radius: 12px; font-size: 10px; font-weight: 900; color: var(--text-dim); transition: 0.3s; text-transform: uppercase; }
         .tab-trigger.active { background: var(--app-accent); color: #000; }
@@ -145,7 +144,7 @@
     </div>
 
     <!-- Login Screen -->
-    <div id="login-screen" class="hidden-state fixed inset-0 z-[190] bg-black flex items-center justify-center p-6 page-transition">
+    <div id="login-screen" class="hidden-state fixed inset-0 z-[190] bg-black flex items-center justify-center p-6 page-transition" style="display: none;">
         <div class="glass p-8 rounded-[2.5rem] w-full max-w-sm text-center">
             <h2 class="text-2xl font-black mb-1 text-white" data-i18n="welcome_title">Seu Perfil</h2>
             <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6" data-i18n="welcome_sub">Como devemos te chamar?</p>
@@ -155,7 +154,7 @@
     </div>
 
     <!-- Main App -->
-    <div id="main-app" class="hidden-state h-screen flex flex-col page-transition relative z-10">
+    <div id="main-app" class="hidden-state h-screen flex flex-col page-transition relative z-10" style="display: none;">
         <header class="h-20 flex items-center justify-between px-6 bg-black/5 backdrop-blur-xl border-b border-[var(--border-alpha)]">
             <div class="flex items-center gap-2">
                 <div class="w-9 h-9 dynamic-grad rounded-lg flex items-center justify-center rotate-3 shadow-lg">
@@ -197,7 +196,7 @@
         </footer>
     </div>
 
-    <!-- Player Expansível -->
+    <!-- Player Screen -->
     <div id="now-playing-screen">
         <canvas id="visualizer"></canvas>
         <div class="relative z-10 flex flex-col items-center justify-between h-full p-6 pt-12 pb-10">
@@ -237,7 +236,7 @@
         </div>
     </div>
 
-    <!-- Menu Customização / Favoritos -->
+    <!-- Side Menu -->
     <div id="side-menu" class="fixed top-0 right-0 w-[85%] max-w-xs h-full z-[150] bg-[var(--bg-color)] border-l border-[var(--border-alpha)] p-8 translate-x-full transition-transform duration-500 shadow-2xl overflow-hidden flex flex-col">
         <div class="flex justify-between items-center mb-8">
             <h3 class="text-xl font-black uppercase italic" data-i18n="options_title">Opções</h3>
@@ -250,7 +249,6 @@
         </nav>
 
         <div class="flex-1 overflow-y-auto no-scrollbar">
-            <!-- Aba Estilo -->
             <div id="tab-style" class="tab-panel active space-y-8">
                 <div>
                     <p class="text-[10px] font-black text-[var(--text-dim)] uppercase mb-3" data-i18n="lang_label">Idioma</p>
@@ -291,7 +289,6 @@
                 </div>
             </div>
 
-            <!-- Aba Favoritos -->
             <div id="tab-favs" class="tab-panel space-y-4">
                 <div id="favorites-list" class="space-y-3"></div>
             </div>
@@ -300,7 +297,7 @@
         <button onclick="handleLogout()" class="mt-6 w-full py-4 rounded-xl border border-[var(--border-alpha)] text-[var(--text-dim)] font-bold text-[10px] uppercase" data-i18n="logout_btn">DESCONECTAR</button>
     </div>
 
-    <!-- Modal Doação -->
+    <!-- Modal -->
     <div id="donation-modal" class="modal-overlay">
         <div class="glass p-8 rounded-[2.5rem] w-full max-w-sm text-center">
             <i class="fa-solid fa-heart-pulse text-4xl text-red-500 mb-4"></i>
@@ -372,7 +369,8 @@
         function setLanguage(lang) {
             currentLang = lang;
             document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`lang-${lang}`).classList.add('active');
+            const btn = document.getElementById(`lang-${lang}`);
+            if(btn) btn.classList.add('active');
             
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
@@ -384,7 +382,8 @@
             });
 
             if(!document.getElementById('main-app').classList.contains('hidden-state')) {
-                document.getElementById('time-greeting').innerText = getGreeting();
+                const greeting = getGreeting();
+                document.getElementById('time-greeting').innerText = greeting;
             }
         }
 
@@ -466,17 +465,41 @@
             return translations[currentLang].greet_night;
         }
 
-        function goToLogin() { document.getElementById('splash-screen').classList.add('hidden-state'); setTimeout(() => { document.getElementById('splash-screen').style.display='none'; document.getElementById('login-screen').classList.remove('hidden-state'); }, 600); }
+        function goToLogin() {
+            const splash = document.getElementById('splash-screen');
+            const login = document.getElementById('login-screen');
+            
+            splash.classList.add('hidden-state');
+            setTimeout(() => {
+                splash.style.display = 'none';
+                login.style.display = 'flex';
+                // Trigger reflow for transition
+                login.offsetHeight;
+                login.classList.remove('hidden-state');
+            }, 600);
+        }
         
         function finishLogin() {
             const name = document.getElementById('username-input').value.trim() || "User";
+            const login = document.getElementById('login-screen');
+            const appEl = document.getElementById('main-app');
+
             document.getElementById('user-name-display').innerText = name;
             document.getElementById('user-initial').innerText = name[0].toUpperCase();
             document.getElementById('time-greeting').innerText = getGreeting();
-            document.getElementById('login-screen').classList.add('hidden-state');
+            
             const now = new Date();
             document.getElementById('date-now').innerText = now.toLocaleString(currentLang === 'pt' ? 'pt-br' : 'en-us', {weekday:'long', day:'numeric', month:'long'});
-            setTimeout(() => { document.getElementById('login-screen').style.display='none'; document.getElementById('main-app').classList.remove('hidden-state'); renderLibrary(); }, 600);
+            
+            login.classList.add('hidden-state');
+            setTimeout(() => {
+                login.style.display = 'none';
+                appEl.style.display = 'flex';
+                // Trigger reflow
+                appEl.offsetHeight;
+                appEl.classList.remove('hidden-state');
+                renderLibrary();
+            }, 600);
         }
 
         function renderLibrary() {
@@ -507,12 +530,14 @@
         }
 
         function initAudioSystem() {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            analyzer = audioCtx.createAnalyser();
-            const source = audioCtx.createMediaElementSource(engine);
-            source.connect(analyzer); analyzer.connect(audioCtx.destination);
-            analyzer.fftSize = 128; dataArray = new Uint8Array(analyzer.frequencyBinCount);
-            drawVisualizer();
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyzer = audioCtx.createAnalyser();
+                const source = audioCtx.createMediaElementSource(engine);
+                source.connect(analyzer); analyzer.connect(audioCtx.destination);
+                analyzer.fftSize = 128; dataArray = new Uint8Array(analyzer.frequencyBinCount);
+                drawVisualizer();
+            } catch(e) { console.log("Audio context blocked"); }
         }
 
         function drawVisualizer() {
@@ -572,8 +597,13 @@
 
         function togglePlay() { 
             if (currentIndex === -1) return playTrack(0); 
-            engine.paused ? engine.play() : engine.pause(); 
-            isPlaying = !engine.paused; 
+            if (engine.paused) {
+                engine.play();
+                isPlaying = true;
+            } else {
+                engine.pause();
+                isPlaying = false;
+            }
             updateUI(); 
         }
         function nextSong() { playTrack((currentIndex + 1) % library.length, 'next'); }
@@ -585,7 +615,36 @@
         function closeNowPlaying() { document.getElementById('now-playing-screen').classList.remove('active'); }
         function closeModal() { document.getElementById('donation-modal').classList.remove('active'); }
         function redirectToDonation() { window.open('https://livepix.gg/echostream', '_blank'); closeModal(); }
-        function handleLogout() { location.reload(); }
+
+        function handleLogout() {
+            // Parar música
+            engine.pause();
+            engine.src = "";
+            isPlaying = false;
+            currentIndex = -1;
+            updateUI();
+            
+            // UI Resets
+            closeNowPlaying();
+            if(!document.getElementById('side-menu').classList.contains('translate-x-full')) toggleMenu();
+
+            const appEl = document.getElementById('main-app');
+            const splash = document.getElementById('splash-screen');
+            
+            // Adiciona estado escondido e espera transição
+            appEl.classList.add('hidden-state');
+            
+            setTimeout(() => {
+                appEl.style.display = 'none';
+                splash.style.display = 'flex';
+                // Reset input
+                document.getElementById('username-input').value = "";
+                // Pequeno delay para garantir que o display:flex foi aplicado antes de remover hidden-state
+                setTimeout(() => {
+                    splash.classList.remove('hidden-state');
+                }, 50);
+            }, 600);
+        }
 
         engine.ontimeupdate = () => {
             const p = (engine.currentTime / engine.duration) * 100 || 0;
@@ -593,8 +652,21 @@
             document.getElementById('time-current').innerText = formatTime(engine.currentTime);
             document.getElementById('time-total').innerText = formatTime(engine.duration);
         };
-        engine.onended = () => { songsPlayedCount++; if (songsPlayedCount === 3 && !hasShownDonation) { document.getElementById('donation-modal').classList.add('active'); hasShownDonation = true; } nextSong(); };
-        function formatTime(s) { if (isNaN(s)) return "0:00"; const m = Math.floor(s/60), r = Math.floor(s%60); return `${m}:${r < 10 ? '0' : ''}${r}`; }
+        
+        engine.onended = () => { 
+            songsPlayedCount++; 
+            if (songsPlayedCount === 3 && !hasShownDonation) { 
+                document.getElementById('donation-modal').classList.add('active'); 
+                hasShownDonation = true; 
+            } 
+            nextSong(); 
+        };
+        
+        function formatTime(s) { 
+            if (isNaN(s)) return "0:00"; 
+            const m = Math.floor(s/60), r = Math.floor(s%60); 
+            return `${m}:${r < 10 ? '0' : ''}${r}`; 
+        }
         
         function initWall() {
             const wall = document.getElementById('splash-wall');
@@ -610,7 +682,10 @@
             }
         }
 
-        window.onload = () => { initWall(); setLanguage('pt'); };
+        window.onload = () => { 
+            initWall(); 
+            setLanguage('pt'); 
+        };
     </script>
 </body>
 </html>
