@@ -30,6 +30,8 @@
             pointer-events: none;
             z-index: 0;
             transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+            background: radial-gradient(circle at top right, var(--grad-color), transparent 40%),
+                        radial-gradient(circle at bottom left, var(--grad-color), transparent 40%);
         }
 
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
@@ -106,14 +108,15 @@
         #search-container { transition: all 0.4s ease; width: 40px; overflow: hidden; }
         #search-container.expanded { width: 160px; background: rgba(255, 255, 255, 0.1); border-radius: 9999px; padding-right: 12px; }
 
-        .favorite-active { color: #ff4d4d !important; }
-        
         input[type=range] { -webkit-appearance: none; background: transparent; }
         input[type=range]::-webkit-slider-runnable-track { background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: var(--app-accent); margin-top: -5px; }
 
-        /* Auth Feedback */
-        #auth-status { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #444; z-index: 300; }
+        #auth-status { position: fixed; bottom: 10px; right: 10px; font-size: 8px; color: #333; z-index: 300; font-family: monospace; }
+        
+        /* Loading animation for cover */
+        .img-loading { background: linear-gradient(90deg, #111 25%, #222 50%, #111 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+        @keyframes loading { from { background-position: 200% 0; } to { background-position: -200% 0; } }
     </style>
 </head>
 <body>
@@ -129,12 +132,12 @@
                 <i class="fa-solid fa-compact-disc text-8xl text-green-500 spin-slow relative"></i>
             </div>
             <h1 class="text-5xl font-black tracking-tighter mb-4 text-white uppercase">EchoStream</h1>
-            <p class="text-zinc-400 text-[10px] tracking-[0.5em] mb-12 uppercase font-bold">Conectando aos seus dados...</p>
+            <p id="splash-status" class="text-zinc-400 text-[10px] tracking-[0.5em] mb-12 uppercase font-bold">Iniciando Sincronização...</p>
             <div id="loader-initial" class="w-12 h-1 bg-white/10 rounded-full overflow-hidden">
                 <div class="h-full bg-green-500 w-1/2 animate-[pulse_1.5s_infinite]"></div>
             </div>
-            <button id="connect-btn" onclick="goToLogin()" class="hidden px-16 py-5 bg-white text-black font-black rounded-full shadow-2xl active:scale-95 transition-all">
-                CONECTAR
+            <button id="connect-btn" class="hidden px-16 py-5 bg-white text-black font-black rounded-full shadow-2xl active:scale-95 transition-all">
+                CONECTAR AGORA
             </button>
         </div>
     </div>
@@ -146,7 +149,7 @@
             <p class="text-zinc-500 text-sm mb-8">Como devemos te chamar?</p>
             <input type="text" id="username-input" placeholder="Seu nome..." 
                 class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl mb-8 outline-none focus:border-green-500 text-center text-xl text-white">
-            <button onclick="finishLogin()" class="w-full py-5 bg-green-500 text-black font-black rounded-2xl active:scale-95">
+            <button id="login-confirm-btn" class="w-full py-5 bg-green-500 text-black font-black rounded-2xl active:scale-95">
                 ENTRAR NO FLOW
             </button>
         </div>
@@ -161,11 +164,11 @@
             </div>
             <div class="flex items-center gap-4">
                 <div id="search-container" class="flex items-center h-10 px-3">
-                    <button onclick="toggleSearch()" class="text-zinc-400 shrink-0"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <button id="search-toggle-btn" class="text-zinc-400 shrink-0"><i class="fa-solid fa-magnifying-glass"></i></button>
                     <input type="text" id="search-input" placeholder="Procurar..." 
-                        class="bg-transparent border-none outline-none text-xs ml-3 w-full text-white" oninput="handleSearch(this.value)">
+                        class="bg-transparent border-none outline-none text-xs ml-3 w-full text-white">
                 </div>
-                <button onclick="toggleMenu()" id="profile-btn" class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30 text-green-500 font-bold active:scale-90 transition-transform">
+                <button id="profile-btn" class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30 text-green-500 font-bold active:scale-90 transition-transform">
                     <span id="user-initial">?</span>
                 </button>
             </div>
@@ -173,22 +176,22 @@
 
         <main class="flex-1 overflow-y-auto p-6 pb-32">
             <div id="greet" class="mb-10 opacity-0 translate-y-4 transition-all duration-1000">
-                <p class="text-green-500 text-[10px] font-bold uppercase tracking-[0.4em] mb-2">Sincronizado na Nuvem</p>
+                <p class="text-green-500 text-[10px] font-bold uppercase tracking-[0.4em] mb-2">Cloud Sincronizada</p>
                 <h2 class="text-4xl font-black text-white leading-tight">Olá, <span id="user-name-display">Usuário</span></h2>
             </div>
             <div id="grid-container" class="grid grid-cols-2 gap-4"></div>
         </main>
 
         <!-- Mini Player -->
-        <footer id="mini-player" class="fixed bottom-0 left-0 right-0 h-24 bg-zinc-950/90 backdrop-blur-3xl border-t border-white/5 px-6 flex items-center justify-between z-[90]" onclick="openNowPlaying()">
+        <footer id="mini-player" class="fixed bottom-0 left-0 right-0 h-24 bg-zinc-950/90 backdrop-blur-3xl border-t border-white/5 px-6 flex items-center justify-between z-[90] cursor-pointer">
             <div class="flex items-center gap-4 w-2/3">
-                <img id="mini-cover" src="" class="w-12 h-12 rounded-xl object-cover shadow-lg bg-zinc-900">
+                <img id="mini-cover" src="" class="w-12 h-12 rounded-xl object-cover shadow-lg bg-zinc-900 img-loading">
                 <div class="overflow-hidden">
-                    <p id="mini-title" class="font-bold truncate text-sm text-white">Selecione uma música</p>
-                    <p id="mini-artist" class="text-[10px] text-zinc-500 truncate uppercase">EchoStream Player</p>
+                    <p id="mini-title" class="font-bold truncate text-sm text-white">Selecione uma faixa</p>
+                    <p id="mini-artist" class="text-[10px] text-zinc-500 truncate uppercase">Aguardando...</p>
                 </div>
             </div>
-            <button onclick="event.stopPropagation(); togglePlay();" id="mini-play-btn" class="w-12 h-12 flex items-center justify-center text-white text-2xl">
+            <button id="mini-play-btn" class="w-12 h-12 flex items-center justify-center text-white text-2xl">
                 <i class="fa-solid fa-play"></i>
             </button>
         </footer>
@@ -199,13 +202,13 @@
         <canvas id="visualizer"></canvas>
         <div class="relative z-10 flex flex-col items-center justify-between h-full p-8 pb-12">
             <div class="w-full flex justify-between items-center">
-                <button onclick="closeNowPlaying()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><i class="fa-solid fa-chevron-down"></i></button>
-                <span class="text-[9px] font-bold tracking-[0.4em] text-zinc-500 uppercase">Tocando agora</span>
-                <button onclick="toggleFavoriteCurrent()" id="fav-btn-main"><i class="fa-solid fa-heart text-zinc-600 text-xl"></i></button>
+                <button id="close-player-btn" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><i class="fa-solid fa-chevron-down"></i></button>
+                <span class="text-[9px] font-bold tracking-[0.4em] text-zinc-500 uppercase">Tocando da Nuvem</span>
+                <button id="fav-btn-main"><i class="fa-solid fa-heart text-zinc-600 text-xl"></i></button>
             </div>
             
             <div class="cover-container" id="large-cover-parent">
-                <img id="large-cover" src="" class="slide-cover slide-active">
+                <img id="large-cover" src="" class="slide-cover slide-active img-loading">
             </div>
 
             <div class="w-full text-center">
@@ -215,7 +218,7 @@
 
             <div class="w-full max-w-sm">
                 <div class="mb-8">
-                    <div class="h-1.5 bg-white/10 rounded-full relative cursor-pointer mb-2" onclick="handleSeek(event)">
+                    <div id="seek-container" class="h-1.5 bg-white/10 rounded-full relative cursor-pointer mb-2">
                         <div id="prog-bar" class="absolute h-full bg-green-500 rounded-full w-0"></div>
                     </div>
                     <div class="flex justify-between text-[10px] font-mono text-zinc-500">
@@ -224,11 +227,11 @@
                     </div>
                 </div>
                 <div class="flex items-center justify-center gap-12">
-                    <button onclick="prevSong()" class="text-2xl text-zinc-400"><i class="fa-solid fa-backward-step"></i></button>
-                    <button id="large-play-btn" onclick="togglePlay()" class="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center shadow-2xl">
+                    <button id="prev-btn" class="text-2xl text-zinc-400 active:scale-75 transition-transform"><i class="fa-solid fa-backward-step"></i></button>
+                    <button id="large-play-btn" class="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-transform">
                         <i class="fa-solid fa-play text-2xl ml-1"></i>
                     </button>
-                    <button onclick="nextSong()" class="text-2xl text-zinc-400"><i class="fa-solid fa-forward-step"></i></button>
+                    <button id="next-btn" class="text-2xl text-zinc-400 active:scale-75 transition-transform"><i class="fa-solid fa-forward-step"></i></button>
                 </div>
             </div>
         </div>
@@ -237,37 +240,41 @@
     <!-- Menu Lateral -->
     <div id="side-menu" class="p-8 flex flex-col">
         <div class="flex justify-between items-center mb-10">
-            <h3 class="text-2xl font-black uppercase tracking-tighter text-white">Opções</h3>
-            <button onclick="toggleMenu()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="text-2xl font-black uppercase tracking-tighter text-white">Perfil</h3>
+            <button id="close-menu-btn"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="space-y-10">
             <div>
-                <p class="text-[10px] font-bold text-zinc-500 mb-4">COR DE DESTAQUE</p>
-                <input type="color" id="accent-picker" onchange="updateAccent(this.value)" value="#22c55e" class="w-full h-12 bg-transparent">
+                <p class="text-[10px] font-bold text-zinc-500 mb-4">COR DA SESSÃO</p>
+                <input type="color" id="accent-picker" value="#22c55e" class="w-full h-12 bg-transparent cursor-pointer">
             </div>
-            <div>
-                <p class="text-[10px] font-bold text-zinc-500 mb-4">SESSÃO</p>
-                <button onclick="location.reload()" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold uppercase">Sincronizar Manualmente</button>
+            <div class="pt-10 border-t border-white/5">
+                <p class="text-zinc-600 text-[9px] uppercase tracking-widest mb-4">Estatísticas</p>
+                <div class="bg-white/5 p-4 rounded-2xl">
+                    <p class="text-xs text-zinc-400">ID de Usuário</p>
+                    <p id="display-uid" class="text-[10px] font-mono text-zinc-500 truncate">Não logado</p>
+                </div>
             </div>
+            <button id="sync-manual-btn" class="w-full py-4 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all">Sincronizar Cloud</button>
         </div>
     </div>
 
     <audio id="audio-engine" playsinline crossorigin="anonymous"></audio>
-    <div id="auth-status">Offline</div>
+    <div id="auth-status">Verificando...</div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CONFIG & GLOBAL STATE
+        // Global Config
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'echo-stream-cloud';
-        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'echo-stream-gh-default';
+
         const library = [
             { id: 1, title: "Shucks", artist: "Original", url: "https://files.catbox.moe/4xk880.m4a", cover: "https://files.catbox.moe/3pdjcj.jpg" },
             { id: 2, title: "Ma'Oi", artist: "Extra", url: "https://files.catbox.moe/q0rw0k.mp3", cover: "https://files.catbox.moe/pkbotd.png" },
@@ -276,126 +283,85 @@
             { id: 5, title: "Fallen Down", artist: "Toby Fox", url: "https://files.catbox.moe/oer90g.mp3", cover: "https://files.catbox.moe/cq1i4q.png" }
         ];
 
+        // State
         let currentUser = null;
-        let userData = {
-            name: "Usuário",
-            accent: "#22c55e",
-            favorites: []
-        };
+        let userData = { name: "Usuário", accent: "#22c55e", favorites: [] };
         let currentIndex = -1;
         let isPlaying = false;
         let audioCtx = null;
         let analyzer, dataArray;
         const engine = document.getElementById('audio-engine');
 
-        // FIREBASE AUTH & SYNC
-        const initSession = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Auth Error", err);
-            }
-        };
+        // Helpers
+        const $ = id => document.getElementById(id);
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('auth-status').innerText = `ID: ${user.uid}`;
-                
-                // Real-time Data Listen
-                const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-                onSnapshot(userDocRef, (snap) => {
-                    if (snap.exists()) {
-                        userData = snap.data();
-                        applyUserData();
-                    } else {
-                        // First time login
-                        document.getElementById('loader-initial').classList.add('hidden');
-                        document.getElementById('connect-btn').classList.remove('hidden');
-                    }
-                }, (err) => console.error("Firestore Error", err));
-            }
-        });
-
+        // Core Actions
         const saveUserData = async () => {
             if (!currentUser) return;
-            const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-            await setDoc(userDocRef, userData, { merge: true });
+            const path = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+            try {
+                await setDoc(path, userData, { merge: true });
+            } catch (e) { console.error("Save failed", e); }
         };
 
         const applyUserData = () => {
-            document.getElementById('user-name-display').innerText = userData.name;
-            document.getElementById('user-initial').innerText = userData.name[0].toUpperCase();
-            document.getElementById('accent-picker').value = userData.accent;
-            updateAccent(userData.accent, false); // false to avoid recursive save
+            $('user-name-display').innerText = userData.name;
+            $('user-initial').innerText = userData.name[0].toUpperCase();
+            $('accent-picker').value = userData.accent;
+            $('display-uid').innerText = currentUser?.uid || "N/A";
+            updateAccent(userData.accent, false);
             
-            // If already logged in, skip splash
-            if(document.getElementById('splash-screen').style.display !== 'none') {
-                finishLogin(true); // silent finish
+            if ($('splash-screen').style.display !== 'none') {
+                finishLogin(true);
             }
             updateFavIcon();
-        };
-
-        // UI ACTIONS
-        window.goToLogin = () => {
-            document.getElementById('splash-screen').classList.add('hidden-state');
-            setTimeout(() => {
-                document.getElementById('splash-screen').style.display = 'none';
-                document.getElementById('login-screen').classList.remove('hidden-state');
-            }, 600);
-        };
-
-        window.finishLogin = (silent = false) => {
-            if (!silent) {
-                const nameInp = document.getElementById('username-input').value;
-                if (nameInp) userData.name = nameInp;
-                saveUserData();
-            }
-
-            document.getElementById('splash-screen').classList.add('hidden-state');
-            document.getElementById('login-screen').classList.add('hidden-state');
-            
-            setTimeout(() => {
-                document.getElementById('splash-screen').style.display = 'none';
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-app').classList.remove('hidden-state');
-                renderLibrary();
-                document.getElementById('greet').style.opacity = "1";
-                document.getElementById('greet').style.transform = "translateY(0)";
-            }, 600);
-        };
-
-        const renderLibrary = () => {
-            const container = document.getElementById('grid-container');
-            container.innerHTML = library.map((s, i) => `
-                <div class="song-card p-3 rounded-3xl bg-white/[0.03] border border-white/5 active:scale-95 transition-transform" data-id="${s.id}">
-                    <img src="${s.cover}" class="w-full aspect-square object-cover rounded-2xl mb-3 shadow-lg">
-                    <p class="font-bold truncate text-[12px] text-white">${s.title}</p>
-                    <p class="text-[10px] text-zinc-500 uppercase truncate">${s.artist}</p>
-                </div>
-            `).join('');
-
-            // Re-bind events to global context
-            document.querySelectorAll('.song-card').forEach((card, idx) => {
-                card.onclick = () => playTrack(idx);
-            });
         };
 
         const updateAccent = (c, save = true) => {
             document.documentElement.style.setProperty('--app-accent', c);
             document.documentElement.style.setProperty('--grad-color', c + '22');
-            if(save) {
+            if (save) {
                 userData.accent = c;
                 saveUserData();
             }
         };
-        window.updateAccent = updateAccent;
 
-        // AUDIO LOGIC
+        const finishLogin = (silent = false) => {
+            if (!silent) {
+                const name = $('username-input').value.trim();
+                if (name) userData.name = name;
+                saveUserData();
+            }
+
+            $('splash-screen').classList.add('hidden-state');
+            $('login-screen').classList.add('hidden-state');
+            
+            setTimeout(() => {
+                $('splash-screen').style.display = 'none';
+                $('login-screen').style.display = 'none';
+                $('main-app').classList.remove('hidden-state');
+                renderLibrary();
+                $('greet').style.opacity = "1";
+                $('greet').style.transform = "translateY(0)";
+            }, 600);
+        };
+
+        const renderLibrary = () => {
+            const container = $('grid-container');
+            container.innerHTML = library.map((s, i) => `
+                <div class="song-card p-3 rounded-3xl bg-white/[0.03] border border-white/5 active:scale-95 transition-transform cursor-pointer" data-idx="${i}">
+                    <img src="${s.cover}" class="w-full aspect-square object-cover rounded-2xl mb-3 shadow-lg img-loading">
+                    <p class="font-bold truncate text-[12px] text-white">${s.title}</p>
+                    <p class="text-[10px] text-zinc-500 uppercase truncate">${s.artist}</p>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.song-card').forEach(card => {
+                card.onclick = () => playTrack(parseInt(card.dataset.idx));
+            });
+        };
+
+        // Audio Logic
         const initAudio = async () => {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -413,24 +379,22 @@
             if (currentIndex !== i) {
                 if (currentIndex !== -1) animateTransition(library[i], dir);
                 else {
-                    document.getElementById('large-title').innerText = library[i].title;
-                    document.getElementById('large-artist').innerText = library[i].artist;
-                    document.getElementById('large-cover').src = library[i].cover;
+                    $('large-title').innerText = library[i].title;
+                    $('large-artist').innerText = library[i].artist;
+                    $('large-cover').src = library[i].cover;
                 }
                 currentIndex = i;
                 engine.src = library[i].url;
-                engine.load();
             }
             
             engine.play().then(() => {
                 isPlaying = true;
                 updateUI();
                 updateFavIcon();
-            }).catch(e => console.error("Playback failed", e));
+            }).catch(e => console.error("Playback Blocked", e));
         };
-        window.playTrack = playTrack;
 
-        window.togglePlay = () => {
+        const togglePlay = () => {
             if (currentIndex === -1) return playTrack(0);
             if (engine.paused) {
                 engine.play();
@@ -444,16 +408,16 @@
 
         const updateUI = () => {
             const icon = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
-            document.getElementById('mini-play-btn').innerHTML = icon;
-            document.getElementById('large-play-btn').innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play ml-1"></i>';
-            document.getElementById('mini-title').innerText = library[currentIndex].title;
-            document.getElementById('mini-artist').innerText = library[currentIndex].artist;
-            document.getElementById('mini-cover').src = library[currentIndex].cover;
+            $('mini-play-btn').innerHTML = icon;
+            $('large-play-btn').innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play ml-1"></i>';
+            $('mini-title').innerText = library[currentIndex].title;
+            $('mini-artist').innerText = library[currentIndex].artist;
+            $('mini-cover').src = library[currentIndex].cover;
         };
 
         const animateTransition = (song, dir) => {
-            const img = document.getElementById('large-cover');
-            const parent = document.getElementById('large-cover-parent');
+            const img = $('large-cover');
+            const parent = $('large-cover-parent');
             const oldImg = img.cloneNode();
             parent.appendChild(oldImg);
 
@@ -461,8 +425,8 @@
             img.src = song.cover;
             img.className = `slide-cover ${dir === 'next' ? 'slide-in-right' : 'slide-in-left'}`;
 
-            document.getElementById('large-title').innerText = song.title;
-            document.getElementById('large-artist').innerText = song.artist;
+            $('large-title').innerText = song.title;
+            $('large-artist').innerText = song.artist;
 
             setTimeout(() => {
                 oldImg.classList.add(dir === 'next' ? 'slide-out-left' : 'slide-out-right');
@@ -473,93 +437,100 @@
         };
 
         const setupVisualizer = () => {
-            const canvas = document.getElementById('visualizer');
+            const canvas = $('visualizer');
             const ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+            window.addEventListener('resize', resize);
+            resize();
+
             dataArray = new Uint8Array(analyzer.frequencyBinCount);
             function draw() {
                 requestAnimationFrame(draw);
                 analyzer.getByteFrequencyData(dataArray);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const barWidth = canvas.width / 32;
-                for(let i=0; i<32; i++) {
-                    const h = (dataArray[i]/255) * canvas.height * 0.4;
-                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--app-accent') + '44';
-                    ctx.fillRect(i*barWidth, canvas.height-h, barWidth-2, h);
+                const barWidth = canvas.width / 40;
+                for(let i=0; i<40; i++) {
+                    const h = (dataArray[i]/255) * canvas.height * 0.35;
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--app-accent') + '33';
+                    ctx.fillRect(i*barWidth, canvas.height-h, barWidth-4, h);
                 }
             }
             draw();
         };
 
-        // FAV LOGIC
-        window.toggleFavoriteCurrent = () => {
+        // Event Listeners
+        $('connect-btn').onclick = () => {
+            $('splash-screen').classList.add('hidden-state');
+            setTimeout(() => {
+                $('splash-screen').style.display = 'none';
+                $('login-screen').classList.remove('hidden-state');
+            }, 600);
+        };
+
+        $('login-confirm-btn').onclick = () => finishLogin();
+        $('search-toggle-btn').onclick = () => $('search-container').classList.toggle('expanded');
+        $('search-input').oninput = (e) => {
+            const val = e.target.value.toLowerCase();
+            document.querySelectorAll('.song-card').forEach(c => {
+                c.style.display = c.innerText.toLowerCase().includes(val) ? 'block' : 'none';
+            });
+        };
+        
+        $('profile-btn').onclick = () => $('side-menu').classList.add('active');
+        $('close-menu-btn').onclick = () => $('side-menu').classList.remove('active');
+        $('mini-player').onclick = () => { if(currentIndex !== -1) $('now-playing-screen').classList.add('active'); };
+        $('close-player-btn').onclick = () => $('now-playing-screen').classList.remove('active');
+        $('mini-play-btn').onclick = (e) => { e.stopPropagation(); togglePlay(); };
+        $('large-play-btn').onclick = () => togglePlay();
+        $('next-btn').onclick = () => playTrack((currentIndex + 1) % library.length, 'next');
+        $('prev-btn').onclick = () => playTrack((currentIndex - 1 + library.length) % library.length, 'prev');
+        $('accent-picker').onchange = (e) => updateAccent(e.target.value);
+        $('sync-manual-btn').onclick = () => location.reload();
+
+        $('fav-btn-main').onclick = () => {
             if (currentIndex === -1) return;
-            const songId = library[currentIndex].id;
-            const index = userData.favorites.indexOf(songId);
-            if (index > -1) {
-                userData.favorites.splice(index, 1);
-            } else {
-                userData.favorites.push(songId);
-            }
+            const id = library[currentIndex].id;
+            const idx = userData.favorites.indexOf(id);
+            if (idx > -1) userData.favorites.splice(idx, 1);
+            else userData.favorites.push(id);
             saveUserData();
             updateFavIcon();
         };
 
         const updateFavIcon = () => {
-            if(currentIndex === -1) return;
+            if (currentIndex === -1) return;
             const isFav = userData.favorites.includes(library[currentIndex].id);
-            const btn = document.getElementById('fav-btn-main');
-            if (isFav) {
-                btn.innerHTML = '<i class="fa-solid fa-heart text-red-500 text-xl"></i>';
-            } else {
-                btn.innerHTML = '<i class="fa-solid fa-heart text-zinc-600 text-xl"></i>';
-            }
+            $('fav-btn-main').innerHTML = `<i class="fa-solid fa-heart ${isFav ? 'text-red-500' : 'text-zinc-600'} text-xl"></i>`;
         };
 
-        // HELPERS & WINDOW
-        window.openNowPlaying = () => { if(currentIndex!==-1) document.getElementById('now-playing-screen').classList.add('active'); };
-        window.closeNowPlaying = () => { document.getElementById('now-playing-screen').classList.remove('active'); };
-        window.toggleMenu = () => { document.getElementById('side-menu').classList.toggle('active'); };
-        window.toggleSearch = () => { document.getElementById('search-container').classList.toggle('expanded'); };
-        
-        window.handleSearch = (v) => { 
-            const t = v.toLowerCase();
-            document.querySelectorAll('.song-card').forEach(c => {
-                c.style.display = c.innerText.toLowerCase().includes(t) ? 'block' : 'none';
-            });
-        };
-
-        window.handleSeek = (e) => {
+        $('seek-container').onclick = (e) => {
             const r = e.currentTarget.getBoundingClientRect();
-            engine.currentTime = ((e.clientX - r.left) / r.width) * engine.duration;
+            const pct = (e.clientX - r.left) / r.width;
+            engine.currentTime = pct * engine.duration;
         };
 
         engine.ontimeupdate = () => {
             const p = (engine.currentTime / engine.duration) * 100 || 0;
-            document.getElementById('prog-bar').style.width = p + '%';
-            document.getElementById('time-current').innerText = formatTime(engine.currentTime);
-            document.getElementById('time-total').innerText = formatTime(engine.duration);
+            $('prog-bar').style.width = p + '%';
+            $('time-current').innerText = formatTime(engine.currentTime);
+            $('time-total').innerText = formatTime(engine.duration);
         };
 
-        engine.onended = () => window.nextSong();
+        engine.onended = () => $('next-btn').click();
 
         const formatTime = (s) => {
-            if(isNaN(s)) return "0:00";
+            if (isNaN(s)) return "0:00";
             const m = Math.floor(s/60), r = Math.floor(s%60);
             return `${m}:${r<10?'0':''}${r}`;
         };
 
-        window.nextSong = () => { playTrack((currentIndex+1)%library.length, 'next'); };
-        window.prevSong = () => { playTrack((currentIndex-1+library.length)%library.length, 'prev'); };
-
+        // Startup
         const initWall = () => {
-            const wall = document.getElementById('splash-wall');
-            if(!wall) return;
-            for(let i=0; i<4; i++) {
+            const wall = $('splash-wall');
+            for(let i=0; i<5; i++) {
                 const col = document.createElement('div');
                 col.className = `wall-column ${i%2==0?'up':'down'}`;
-                [...library, ...library].forEach(s => {
+                [...library, ...library, ...library].forEach(s => {
                     const img = document.createElement('img');
                     img.src = s.cover; img.className = 'wall-item'; col.appendChild(img);
                 });
@@ -567,7 +538,38 @@
             }
         };
 
-        // Start
+        const initSession = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) { console.error("Session init failed", err); }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                $('auth-status').innerText = `ID: ${user.uid.substring(0,8)}...`;
+                
+                const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+                onSnapshot(userDocRef, (snap) => {
+                    if (snap.exists()) {
+                        userData = snap.data();
+                        applyUserData();
+                    } else {
+                        $('loader-initial').classList.add('hidden');
+                        $('connect-btn').classList.remove('hidden');
+                        $('splash-status').innerText = "Dados não encontrados";
+                    }
+                }, (err) => {
+                    console.error("Firestore Error", err);
+                    $('auth-status').innerText = "Erro de Sincronia";
+                });
+            }
+        });
+
         initWall();
         initSession();
 
