@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>EchoStream | Cloud Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        :root {
+            --app-accent: #22c55e;
+            --grad-color: rgba(34, 197, 94, 0.15);
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #000; 
+            color: white; 
+            overflow: hidden; 
+            height: 100vh; 
+            margin: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #dynamic-bg {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+            background: radial-gradient(circle at 50% 50%, var(--grad-color) 0%, transparent 70%);
+        }
+
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .page-transition { transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .hidden-state { opacity: 0; transform: scale(0.95); filter: blur(10px); pointer-events: none; }
+        
+        .splash-wall {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            perspective: 2000px;
+            overflow: hidden;
+            opacity: 0.25;
+            z-index: 0;
+            transform: rotateX(15deg) rotateZ(-10deg) scale(1.4);
+        }
+
+        .wall-column {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 140px;
+            will-change: transform;
+        }
+
+        .wall-column.up { animation: scrollUp 45s linear infinite; }
+        .wall-column.down { animation: scrollDown 45s linear infinite; }
+
+        @keyframes scrollUp { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+        @keyframes scrollDown { from { transform: translateY(-50%); } to { transform: translateY(0); } }
+
+        .wall-item {
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 12px;
+            object-fit: cover;
+            background: #111;
+        }
+
+        #side-menu {
+            position: fixed; top: 0; right: 0; width: 300px; height: 100%; z-index: 150;
+            background: rgba(10, 10, 10, 0.98);
+            backdrop-filter: blur(30px);
+            transform: translateX(100%);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            border-left: 1px solid rgba(255,255,255,0.1);
+        }
+        #side-menu.active { transform: translateX(0); }
+
+        #now-playing-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100;
+            background: linear-gradient(to bottom, #0a0a0a, #000);
+            transform: translateY(100%);
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #now-playing-screen.active { transform: translateY(0); }
+
+        #visualizer { position: absolute; bottom: 0; left: 0; width: 100%; height: 35%; z-index: 0; opacity: 0.4; pointer-events: none; }
+
+        .cover-container { position: relative; width: 100%; max-width: 320px; aspect-ratio: 1/1; perspective: 1200px; }
+        .slide-cover { position: absolute; inset: 0; transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease; border-radius: 2rem; box-shadow: 0 30px 60px rgba(0,0,0,0.8); object-fit: cover; }
+        
+        .slide-out-left { transform: translateX(-150%) rotateY(-30deg) scale(0.8); opacity: 0; }
+        .slide-out-right { transform: translateX(150%) rotateY(30deg) scale(0.8); opacity: 0; }
+        .slide-in-right { transform: translateX(150%) rotateY(30deg) scale(0.8); opacity: 0; }
+        .slide-in-left { transform: translateX(-150%) rotateY(-30deg) scale(0.8); opacity: 0; }
+        .slide-active { transform: translateX(0) rotateY(0) scale(1); opacity: 1; }
+
+        .spin-slow { animation: spin 15s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        #search-container { transition: all 0.4s ease; width: 40px; overflow: hidden; }
+        #search-container.expanded { width: 160px; background: rgba(255, 255, 255, 0.1); border-radius: 9999px; padding-right: 12px; }
+
+        .favorite-active { color: #ff4d4d !important; }
+        
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-runnable-track { background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: var(--app-accent); margin-top: -5px; }
+
+        #auth-status { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 8px; color: #333; z-index: 300; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+    <div id="dynamic-bg"></div>
+
+    <!-- Splash Screen -->
+    <div id="splash-screen" class="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center page-transition overflow-hidden">
+        <div class="splash-wall" id="splash-wall"></div>
+        <div class="relative z-10 text-center flex flex-col items-center">
+            <div class="relative mb-6">
+                <div class="absolute inset-0 bg-green-500/30 blur-3xl rounded-full"></div>
+                <i class="fa-solid fa-compact-disc text-8xl text-green-500 spin-slow relative"></i>
+            </div>
+            <h1 class="text-5xl font-black tracking-tighter mb-4 text-white uppercase">EchoStream</h1>
+            <p class="text-zinc-400 text-[10px] tracking-[0.5em] mb-12 uppercase font-bold">Cloud Edition</p>
+            <div id="loader-initial" class="w-12 h-1 bg-white/10 rounded-full overflow-hidden">
+                <div class="h-full bg-green-500 w-1/2 animate-[pulse_1.5s_infinite]"></div>
+            </div>
+            <button id="connect-btn" onclick="goToLogin()" class="hidden px-16 py-5 bg-white text-black font-black rounded-full shadow-2xl active:scale-95 transition-all">
+                CONECTAR
+            </button>
+        </div>
+    </div>
+
+    <!-- Login -->
+    <div id="login-screen" class="hidden-state fixed inset-0 z-[190] bg-black flex items-center justify-center p-4 page-transition">
+        <div class="glass p-10 rounded-[3rem] w-full max-w-xs text-center">
+            <h2 class="text-2xl font-black mb-2 text-white">Bem-vindo</h2>
+            <p class="text-zinc-500 text-sm mb-8">Como devemos te chamar?</p>
+            <input type="text" id="username-input" placeholder="Seu nome..." 
+                class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl mb-8 outline-none focus:border-green-500 text-center text-xl text-white">
+            <button onclick="finishLogin()" class="w-full py-5 bg-green-500 text-black font-black rounded-2xl active:scale-95">
+                ENTRAR NO FLOW
+            </button>
+        </div>
+    </div>
+
+    <!-- App Principal -->
+    <div id="main-app" class="hidden-state h-screen flex flex-col page-transition relative z-10">
+        <header class="h-20 flex items-center justify-between px-6 bg-black/20 backdrop-blur-lg">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-compact-disc text-green-500 text-xl" id="logo-icon"></i>
+                <span class="font-black tracking-tighter text-xl uppercase text-white">Echo</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="search-container" class="flex items-center h-10 px-3">
+                    <button onclick="toggleSearch()" class="text-zinc-400 shrink-0"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <input type="text" id="search-input" placeholder="Procurar..." 
+                        class="bg-transparent border-none outline-none text-xs ml-3 w-full text-white" oninput="handleSearch(this.value)">
+                </div>
+                <button onclick="toggleMenu()" id="profile-btn" class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30 text-green-500 font-bold active:scale-90 transition-transform">
+                    <span id="user-initial">?</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-6 pb-32">
+            <div id="greet" class="mb-10 opacity-0 translate-y-4 transition-all duration-1000">
+                <p class="text-green-500 text-[10px] font-bold uppercase tracking-[0.4em] mb-2">Sincronizado na Nuvem</p>
+                <h2 class="text-4xl font-black text-white leading-tight">Olá, <span id="user-name-display">Usuário</span></h2>
+            </div>
+            <div id="grid-container" class="grid grid-cols-2 gap-4"></div>
+        </main>
+
+        <!-- Mini Player -->
+        <footer id="mini-player" class="fixed bottom-0 left-0 right-0 h-24 bg-zinc-950/90 backdrop-blur-3xl border-t border-white/5 px-6 flex items-center justify-between z-[90]" onclick="openNowPlaying()">
+            <div class="flex items-center gap-4 w-2/3">
+                <img id="mini-cover" src="" class="w-12 h-12 rounded-xl object-cover shadow-lg bg-zinc-900">
+                <div class="overflow-hidden">
+                    <p id="mini-title" class="font-bold truncate text-sm text-white">Selecione uma música</p>
+                    <p id="mini-artist" class="text-[10px] text-zinc-500 truncate uppercase">EchoStream Player</p>
+                </div>
+            </div>
+            <button onclick="event.stopPropagation(); togglePlay();" id="mini-play-btn" class="w-12 h-12 flex items-center justify-center text-white text-2xl">
+                <i class="fa-solid fa-play"></i>
+            </button>
+        </footer>
+    </div>
+
+    <!-- Player Expansível -->
+    <div id="now-playing-screen">
+        <canvas id="visualizer"></canvas>
+        <div class="relative z-10 flex flex-col items-center justify-between h-full p-8 pb-12">
+            <div class="w-full flex justify-between items-center">
+                <button onclick="closeNowPlaying()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"><i class="fa-solid fa-chevron-down"></i></button>
+                <span class="text-[9px] font-bold tracking-[0.4em] text-zinc-500 uppercase">Tocando agora</span>
+                <button onclick="toggleFavoriteCurrent()" id="fav-btn-main"><i class="fa-solid fa-heart text-zinc-600 text-xl"></i></button>
+            </div>
+            
+            <div class="cover-container" id="large-cover-parent">
+                <img id="large-cover" src="" class="slide-cover slide-active">
+            </div>
+
+            <div class="w-full text-center">
+                <h2 id="large-title" class="text-2xl font-black text-white truncate mb-1">Título</h2>
+                <p id="large-artist" class="text-green-500 font-bold tracking-widest text-[10px] uppercase">Artista</p>
+            </div>
+
+            <div class="w-full max-w-sm">
+                <div class="mb-8">
+                    <div class="h-1.5 bg-white/10 rounded-full relative cursor-pointer mb-2" onclick="handleSeek(event)">
+                        <div id="prog-bar" class="absolute h-full bg-green-500 rounded-full w-0"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] font-mono text-zinc-500">
+                        <span id="time-current">0:00</span>
+                        <span id="time-total">0:00</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center gap-12">
+                    <button onclick="prevSong()" class="text-2xl text-zinc-400"><i class="fa-solid fa-backward-step"></i></button>
+                    <button id="large-play-btn" onclick="togglePlay()" class="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center shadow-2xl">
+                        <i class="fa-solid fa-play text-2xl ml-1"></i>
+                    </button>
+                    <button onclick="nextSong()" class="text-2xl text-zinc-400"><i class="fa-solid fa-forward-step"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Lateral -->
+    <div id="side-menu" class="p-8 flex flex-col">
+        <div class="flex justify-between items-center mb-10">
+            <h3 class="text-2xl font-black uppercase tracking-tighter text-white">Opções</h3>
+            <button onclick="toggleMenu()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-10">
+            <div>
+                <p class="text-[10px] font-bold text-zinc-500 mb-4">COR DE DESTAQUE</p>
+                <input type="color" id="accent-picker" onchange="updateAccent(this.value)" value="#22c55e" class="w-full h-12 bg-transparent">
+            </div>
+            <div>
+                <p class="text-[10px] font-bold text-zinc-500 mb-4">SESSÃO</p>
+                <button onclick="location.reload()" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold uppercase">Reiniciar App</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audio-engine" playsinline crossorigin="anonymous"></audio>
+    <div id="auth-status">Offline</div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // CONFIG & GLOBAL STATE
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'echo-stream-cloud-v1';
+        
+        const library = [
+            { id: 1, title: "Shucks", artist: "Original", url: "https://files.catbox.moe/4xk880.m4a", cover: "https://files.catbox.moe/3pdjcj.jpg" },
+            { id: 2, title: "Ma'Oi", artist: "Extra", url: "https://files.catbox.moe/q0rw0k.mp3", cover: "https://files.catbox.moe/pkbotd.png" },
+            { id: 3, title: "ShucksV3", artist: "Extra", url: "https://files.catbox.moe/33m4oi.mp3", cover: "https://files.catbox.moe/uzgviz.png" },
+            { id: 4, title: "Shadow 4ever", artist: "Novo", url: "https://files.catbox.moe/iq4bdr.mp3", cover: "https://files.catbox.moe/6y9f8v.jpg" },
+            { id: 5, title: "Fallen Down", artist: "Toby Fox", url: "https://files.catbox.moe/oer90g.mp3", cover: "https://files.catbox.moe/cq1i4q.png" }
+        ];
+
+        let currentUser = null;
+        let userData = {
+            name: "Usuário",
+            accent: "#22c55e",
+            favorites: []
+        };
+        let currentIndex = -1;
+        let isPlaying = false;
+        let audioCtx = null;
+        let analyzer, dataArray;
+        const engine = document.getElementById('audio-engine');
+
+        // FIREBASE AUTH & SYNC
+        const initSession = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth Error", err);
+                document.getElementById('auth-status').innerText = "Erro de conexão";
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('auth-status').innerText = `USER: ${user.uid}`;
+                
+                // Real-time Profile Data Listen
+                const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+                onSnapshot(userDocRef, (snap) => {
+                    if (snap.exists()) {
+                        userData = { ...userData, ...snap.data() };
+                        applyUserData();
+                    } else {
+                        // First time login - show button
+                        document.getElementById('loader-initial').classList.add('hidden');
+                        document.getElementById('connect-btn').classList.remove('hidden');
+                    }
+                }, (err) => console.error("Firestore Listen Error", err));
+            }
+        });
+
+        const saveUserData = async () => {
+            if (!currentUser) return;
+            const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+            try {
+                await setDoc(userDocRef, userData, { merge: true });
+            } catch (e) {
+                console.error("Save failed", e);
+            }
+        };
+
+        const applyUserData = () => {
+            document.getElementById('user-name-display').innerText = userData.name;
+            document.getElementById('user-initial').innerText = (userData.name?.[0] || 'E').toUpperCase();
+            document.getElementById('accent-picker').value = userData.accent;
+            updateAccent(userData.accent, false);
+            
+            // Auto-advance if we were on splash
+            if(document.getElementById('splash-screen').style.display !== 'none') {
+                finishLogin(true);
+            }
+            updateFavIcon();
+        };
+
+        // NAVIGATION UI
+        window.goToLogin = () => {
+            document.getElementById('splash-screen').classList.add('hidden-state');
+            setTimeout(() => {
+                document.getElementById('splash-screen').style.display = 'none';
+                document.getElementById('login-screen').classList.remove('hidden-state');
+            }, 600);
+        };
+
+        window.finishLogin = (silent = false) => {
+            if (!silent) {
+                const nameInp = document.getElementById('username-input').value;
+                if (nameInp) userData.name = nameInp;
+                saveUserData();
+            }
+
+            document.getElementById('splash-screen').classList.add('hidden-state');
+            document.getElementById('login-screen').classList.add('hidden-state');
+            
+            setTimeout(() => {
+                document.getElementById('splash-screen').style.display = 'none';
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').classList.remove('hidden-state');
+                renderLibrary();
+                document.getElementById('greet').style.opacity = "1";
+                document.getElementById('greet').style.transform = "translateY(0)";
+            }, 600);
+        };
+
+        const renderLibrary = () => {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = library.map((s, i) => `
+                <div class="song-card p-3 rounded-3xl bg-white/[0.03] border border-white/5 active:scale-95 transition-transform" data-idx="${i}">
+                    <img src="${s.cover}" class="w-full aspect-square object-cover rounded-2xl mb-3 shadow-lg bg-zinc-900" onerror="this.src='https://placehold.co/400x400/111/fff?text=No+Cover'">
+                    <p class="font-bold truncate text-[12px] text-white">${s.title}</p>
+                    <p class="text-[10px] text-zinc-500 uppercase truncate">${s.artist}</p>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.song-card').forEach(card => {
+                card.onclick = () => playTrack(parseInt(card.dataset.idx));
+            });
+        };
+
+        window.updateAccent = (c, save = true) => {
+            document.documentElement.style.setProperty('--app-accent', c);
+            document.documentElement.style.setProperty('--grad-color', c + '22');
+            if(save) {
+                userData.accent = c;
+                saveUserData();
+            }
+        };
+
+        // AUDIO ENGINE & VISUALS
+        const initAudio = async () => {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyzer = audioCtx.createAnalyser();
+                const source = audioCtx.createMediaElementSource(engine);
+                source.connect(analyzer);
+                analyzer.connect(audioCtx.destination);
+                setupVisualizer();
+            }
+            if (audioCtx.state === "suspended") await audioCtx.resume();
+        };
+
+        window.playTrack = async (i, dir = 'next') => {
+            await initAudio();
+            if (currentIndex !== i) {
+                if (currentIndex !== -1) animateTransition(library[i], dir);
+                else {
+                    document.getElementById('large-title').innerText = library[i].title;
+                    document.getElementById('large-artist').innerText = library[i].artist;
+                    document.getElementById('large-cover').src = library[i].cover;
+                }
+                currentIndex = i;
+                engine.src = library[i].url;
+                engine.load();
+            }
+            
+            engine.play().then(() => {
+                isPlaying = true;
+                updateUI();
+                updateFavIcon();
+            }).catch(e => console.error("Playback interrupted", e));
+        };
+
+        window.togglePlay = () => {
+            if (currentIndex === -1) return window.playTrack(0);
+            if (engine.paused) {
+                engine.play();
+                isPlaying = true;
+            } else {
+                engine.pause();
+                isPlaying = false;
+            }
+            updateUI();
+        };
+
+        const updateUI = () => {
+            const icon = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
+            document.getElementById('mini-play-btn').innerHTML = icon;
+            document.getElementById('large-play-btn').innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play ml-1"></i>';
+            document.getElementById('mini-title').innerText = library[currentIndex].title;
+            document.getElementById('mini-artist').innerText = library[currentIndex].artist;
+            document.getElementById('mini-cover').src = library[currentIndex].cover;
+        };
+
+        const animateTransition = (song, dir) => {
+            const img = document.getElementById('large-cover');
+            const parent = document.getElementById('large-cover-parent');
+            const oldImg = img.cloneNode();
+            parent.appendChild(oldImg);
+
+            img.style.transition = 'none';
+            img.src = song.cover;
+            img.className = `slide-cover ${dir === 'next' ? 'slide-in-right' : 'slide-in-left'}`;
+
+            document.getElementById('large-title').innerText = song.title;
+            document.getElementById('large-artist').innerText = song.artist;
+
+            setTimeout(() => {
+                oldImg.classList.add(dir === 'next' ? 'slide-out-left' : 'slide-out-right');
+                img.style.transition = '';
+                img.className = 'slide-cover slide-active';
+                setTimeout(() => oldImg.remove(), 700);
+            }, 50);
+        };
+
+        const setupVisualizer = () => {
+            const canvas = document.getElementById('visualizer');
+            const ctx = canvas.getContext('2d');
+            
+            const resize = () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            };
+            window.onresize = resize;
+            resize();
+
+            dataArray = new Uint8Array(analyzer.frequencyBinCount);
+            function draw() {
+                requestAnimationFrame(draw);
+                analyzer.getByteFrequencyData(dataArray);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const barWidth = canvas.width / 40;
+                for(let i=0; i<40; i++) {
+                    const h = (dataArray[i]/255) * canvas.height * 0.45;
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--app-accent') + '33';
+                    ctx.fillRect(i*barWidth, canvas.height-h, barWidth-4, h);
+                }
+            }
+            draw();
+        };
+
+        // FAVORITES
+        window.toggleFavoriteCurrent = () => {
+            if (currentIndex === -1) return;
+            const songId = library[currentIndex].id;
+            const idx = userData.favorites.indexOf(songId);
+            if (idx > -1) userData.favorites.splice(idx, 1);
+            else userData.favorites.push(songId);
+            saveUserData();
+            updateFavIcon();
+        };
+
+        const updateFavIcon = () => {
+            if(currentIndex === -1) return;
+            const isFav = userData.favorites.includes(library[currentIndex].id);
+            const btn = document.getElementById('fav-btn-main');
+            btn.innerHTML = isFav 
+                ? '<i class="fa-solid fa-heart text-red-500 text-xl animate-pulse"></i>' 
+                : '<i class="fa-solid fa-heart text-zinc-600 text-xl"></i>';
+        };
+
+        // CONTROLS & UTILS
+        window.openNowPlaying = () => { if(currentIndex!==-1) document.getElementById('now-playing-screen').classList.add('active'); };
+        window.closeNowPlaying = () => { document.getElementById('now-playing-screen').classList.remove('active'); };
+        window.toggleMenu = () => { document.getElementById('side-menu').classList.toggle('active'); };
+        window.toggleSearch = () => { document.getElementById('search-container').classList.toggle('expanded'); if(document.getElementById('search-container').classList.contains('expanded')) document.getElementById('search-input').focus(); };
+        
+        window.handleSearch = (v) => { 
+            const t = v.toLowerCase();
+            document.querySelectorAll('.song-card').forEach(c => {
+                c.style.display = c.innerText.toLowerCase().includes(t) ? 'block' : 'none';
+            });
+        };
+
+        window.handleSeek = (e) => {
+            if(!engine.duration) return;
+            const r = e.currentTarget.getBoundingClientRect();
+            engine.currentTime = ((e.clientX - r.left) / r.width) * engine.duration;
+        };
+
+        engine.ontimeupdate = () => {
+            const p = (engine.currentTime / engine.duration) * 100 || 0;
+            document.getElementById('prog-bar').style.width = p + '%';
+            document.getElementById('time-current').innerText = formatTime(engine.currentTime);
+            document.getElementById('time-total').innerText = formatTime(engine.duration);
+        };
+
+        engine.onended = () => window.nextSong();
+
+        const formatTime = (s) => {
+            if(!s || isNaN(s)) return "0:00";
+            const m = Math.floor(s/60), r = Math.floor(s%60);
+            return `${m}:${r<10?'0':''}${r}`;
+        };
+
+        window.nextSong = () => { window.playTrack((currentIndex+1)%library.length, 'next'); };
+        window.prevSong = () => { window.playTrack((currentIndex-1+library.length)%library.length, 'prev'); };
+
+        const initWall = () => {
+            const wall = document.getElementById('splash-wall');
+            for(let i=0; i<6; i++) {
+                const col = document.createElement('div');
+                col.className = `wall-column ${i%2==0?'up':'down'}`;
+                [...library, ...library, ...library].forEach(s => {
+                    const img = document.createElement('img');
+                    img.src = s.cover; img.className = 'wall-item'; col.appendChild(img);
+                });
+                wall.appendChild(col);
+            }
+        };
+
+        // App Start
+        initWall();
+        initSession();
+
+    </script>
+</body>
+</html>
+
