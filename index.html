@@ -30,7 +30,6 @@
             pointer-events: none;
             z-index: 0;
             transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
-            background: radial-gradient(circle at 50% 50%, var(--grad-color) 0%, transparent 70%);
         }
 
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
@@ -113,7 +112,8 @@
         input[type=range]::-webkit-slider-runnable-track { background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: var(--app-accent); margin-top: -5px; }
 
-        #auth-status { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 8px; color: #333; z-index: 300; letter-spacing: 1px; }
+        /* Auth Feedback */
+        #auth-status { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #444; z-index: 300; }
     </style>
 </head>
 <body>
@@ -129,7 +129,7 @@
                 <i class="fa-solid fa-compact-disc text-8xl text-green-500 spin-slow relative"></i>
             </div>
             <h1 class="text-5xl font-black tracking-tighter mb-4 text-white uppercase">EchoStream</h1>
-            <p class="text-zinc-400 text-[10px] tracking-[0.5em] mb-12 uppercase font-bold">Cloud Edition</p>
+            <p class="text-zinc-400 text-[10px] tracking-[0.5em] mb-12 uppercase font-bold">Conectando aos seus dados...</p>
             <div id="loader-initial" class="w-12 h-1 bg-white/10 rounded-full overflow-hidden">
                 <div class="h-full bg-green-500 w-1/2 animate-[pulse_1.5s_infinite]"></div>
             </div>
@@ -247,7 +247,7 @@
             </div>
             <div>
                 <p class="text-[10px] font-bold text-zinc-500 mb-4">SESSÃO</p>
-                <button onclick="location.reload()" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold uppercase">Reiniciar App</button>
+                <button onclick="location.reload()" class="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-xs font-bold uppercase">Sincronizar Manualmente</button>
             </div>
         </div>
     </div>
@@ -266,7 +266,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'echo-stream-cloud-v1';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'echo-stream-cloud';
         
         const library = [
             { id: 1, title: "Shucks", artist: "Original", url: "https://files.catbox.moe/4xk880.m4a", cover: "https://files.catbox.moe/3pdjcj.jpg" },
@@ -298,54 +298,49 @@
                 }
             } catch (err) {
                 console.error("Auth Error", err);
-                document.getElementById('auth-status').innerText = "Erro de conexão";
             }
         };
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
-                document.getElementById('auth-status').innerText = `USER: ${user.uid}`;
+                document.getElementById('auth-status').innerText = `ID: ${user.uid}`;
                 
-                // Real-time Profile Data Listen
+                // Real-time Data Listen
                 const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
                 onSnapshot(userDocRef, (snap) => {
                     if (snap.exists()) {
-                        userData = { ...userData, ...snap.data() };
+                        userData = snap.data();
                         applyUserData();
                     } else {
-                        // First time login - show button
+                        // First time login
                         document.getElementById('loader-initial').classList.add('hidden');
                         document.getElementById('connect-btn').classList.remove('hidden');
                     }
-                }, (err) => console.error("Firestore Listen Error", err));
+                }, (err) => console.error("Firestore Error", err));
             }
         });
 
         const saveUserData = async () => {
             if (!currentUser) return;
             const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-            try {
-                await setDoc(userDocRef, userData, { merge: true });
-            } catch (e) {
-                console.error("Save failed", e);
-            }
+            await setDoc(userDocRef, userData, { merge: true });
         };
 
         const applyUserData = () => {
             document.getElementById('user-name-display').innerText = userData.name;
-            document.getElementById('user-initial').innerText = (userData.name?.[0] || 'E').toUpperCase();
+            document.getElementById('user-initial').innerText = userData.name[0].toUpperCase();
             document.getElementById('accent-picker').value = userData.accent;
-            updateAccent(userData.accent, false);
+            updateAccent(userData.accent, false); // false to avoid recursive save
             
-            // Auto-advance if we were on splash
+            // If already logged in, skip splash
             if(document.getElementById('splash-screen').style.display !== 'none') {
-                finishLogin(true);
+                finishLogin(true); // silent finish
             }
             updateFavIcon();
         };
 
-        // NAVIGATION UI
+        // UI ACTIONS
         window.goToLogin = () => {
             document.getElementById('splash-screen').classList.add('hidden-state');
             setTimeout(() => {
@@ -377,19 +372,20 @@
         const renderLibrary = () => {
             const container = document.getElementById('grid-container');
             container.innerHTML = library.map((s, i) => `
-                <div class="song-card p-3 rounded-3xl bg-white/[0.03] border border-white/5 active:scale-95 transition-transform" data-idx="${i}">
-                    <img src="${s.cover}" class="w-full aspect-square object-cover rounded-2xl mb-3 shadow-lg bg-zinc-900" onerror="this.src='https://placehold.co/400x400/111/fff?text=No+Cover'">
+                <div class="song-card p-3 rounded-3xl bg-white/[0.03] border border-white/5 active:scale-95 transition-transform" data-id="${s.id}">
+                    <img src="${s.cover}" class="w-full aspect-square object-cover rounded-2xl mb-3 shadow-lg">
                     <p class="font-bold truncate text-[12px] text-white">${s.title}</p>
                     <p class="text-[10px] text-zinc-500 uppercase truncate">${s.artist}</p>
                 </div>
             `).join('');
 
-            document.querySelectorAll('.song-card').forEach(card => {
-                card.onclick = () => playTrack(parseInt(card.dataset.idx));
+            // Re-bind events to global context
+            document.querySelectorAll('.song-card').forEach((card, idx) => {
+                card.onclick = () => playTrack(idx);
             });
         };
 
-        window.updateAccent = (c, save = true) => {
+        const updateAccent = (c, save = true) => {
             document.documentElement.style.setProperty('--app-accent', c);
             document.documentElement.style.setProperty('--grad-color', c + '22');
             if(save) {
@@ -397,8 +393,9 @@
                 saveUserData();
             }
         };
+        window.updateAccent = updateAccent;
 
-        // AUDIO ENGINE & VISUALS
+        // AUDIO LOGIC
         const initAudio = async () => {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -411,7 +408,7 @@
             if (audioCtx.state === "suspended") await audioCtx.resume();
         };
 
-        window.playTrack = async (i, dir = 'next') => {
+        const playTrack = async (i, dir = 'next') => {
             await initAudio();
             if (currentIndex !== i) {
                 if (currentIndex !== -1) animateTransition(library[i], dir);
@@ -429,11 +426,12 @@
                 isPlaying = true;
                 updateUI();
                 updateFavIcon();
-            }).catch(e => console.error("Playback interrupted", e));
+            }).catch(e => console.error("Playback failed", e));
         };
+        window.playTrack = playTrack;
 
         window.togglePlay = () => {
-            if (currentIndex === -1) return window.playTrack(0);
+            if (currentIndex === -1) return playTrack(0);
             if (engine.paused) {
                 engine.play();
                 isPlaying = true;
@@ -477,36 +475,33 @@
         const setupVisualizer = () => {
             const canvas = document.getElementById('visualizer');
             const ctx = canvas.getContext('2d');
-            
-            const resize = () => {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-            };
-            window.onresize = resize;
-            resize();
-
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
             dataArray = new Uint8Array(analyzer.frequencyBinCount);
             function draw() {
                 requestAnimationFrame(draw);
                 analyzer.getByteFrequencyData(dataArray);
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                const barWidth = canvas.width / 40;
-                for(let i=0; i<40; i++) {
-                    const h = (dataArray[i]/255) * canvas.height * 0.45;
-                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--app-accent') + '33';
-                    ctx.fillRect(i*barWidth, canvas.height-h, barWidth-4, h);
+                const barWidth = canvas.width / 32;
+                for(let i=0; i<32; i++) {
+                    const h = (dataArray[i]/255) * canvas.height * 0.4;
+                    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--app-accent') + '44';
+                    ctx.fillRect(i*barWidth, canvas.height-h, barWidth-2, h);
                 }
             }
             draw();
         };
 
-        // FAVORITES
+        // FAV LOGIC
         window.toggleFavoriteCurrent = () => {
             if (currentIndex === -1) return;
             const songId = library[currentIndex].id;
-            const idx = userData.favorites.indexOf(songId);
-            if (idx > -1) userData.favorites.splice(idx, 1);
-            else userData.favorites.push(songId);
+            const index = userData.favorites.indexOf(songId);
+            if (index > -1) {
+                userData.favorites.splice(index, 1);
+            } else {
+                userData.favorites.push(songId);
+            }
             saveUserData();
             updateFavIcon();
         };
@@ -515,16 +510,18 @@
             if(currentIndex === -1) return;
             const isFav = userData.favorites.includes(library[currentIndex].id);
             const btn = document.getElementById('fav-btn-main');
-            btn.innerHTML = isFav 
-                ? '<i class="fa-solid fa-heart text-red-500 text-xl animate-pulse"></i>' 
-                : '<i class="fa-solid fa-heart text-zinc-600 text-xl"></i>';
+            if (isFav) {
+                btn.innerHTML = '<i class="fa-solid fa-heart text-red-500 text-xl"></i>';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-heart text-zinc-600 text-xl"></i>';
+            }
         };
 
-        // CONTROLS & UTILS
+        // HELPERS & WINDOW
         window.openNowPlaying = () => { if(currentIndex!==-1) document.getElementById('now-playing-screen').classList.add('active'); };
         window.closeNowPlaying = () => { document.getElementById('now-playing-screen').classList.remove('active'); };
         window.toggleMenu = () => { document.getElementById('side-menu').classList.toggle('active'); };
-        window.toggleSearch = () => { document.getElementById('search-container').classList.toggle('expanded'); if(document.getElementById('search-container').classList.contains('expanded')) document.getElementById('search-input').focus(); };
+        window.toggleSearch = () => { document.getElementById('search-container').classList.toggle('expanded'); };
         
         window.handleSearch = (v) => { 
             const t = v.toLowerCase();
@@ -534,7 +531,6 @@
         };
 
         window.handleSeek = (e) => {
-            if(!engine.duration) return;
             const r = e.currentTarget.getBoundingClientRect();
             engine.currentTime = ((e.clientX - r.left) / r.width) * engine.duration;
         };
@@ -549,20 +545,21 @@
         engine.onended = () => window.nextSong();
 
         const formatTime = (s) => {
-            if(!s || isNaN(s)) return "0:00";
+            if(isNaN(s)) return "0:00";
             const m = Math.floor(s/60), r = Math.floor(s%60);
             return `${m}:${r<10?'0':''}${r}`;
         };
 
-        window.nextSong = () => { window.playTrack((currentIndex+1)%library.length, 'next'); };
-        window.prevSong = () => { window.playTrack((currentIndex-1+library.length)%library.length, 'prev'); };
+        window.nextSong = () => { playTrack((currentIndex+1)%library.length, 'next'); };
+        window.prevSong = () => { playTrack((currentIndex-1+library.length)%library.length, 'prev'); };
 
         const initWall = () => {
             const wall = document.getElementById('splash-wall');
-            for(let i=0; i<6; i++) {
+            if(!wall) return;
+            for(let i=0; i<4; i++) {
                 const col = document.createElement('div');
                 col.className = `wall-column ${i%2==0?'up':'down'}`;
-                [...library, ...library, ...library].forEach(s => {
+                [...library, ...library].forEach(s => {
                     const img = document.createElement('img');
                     img.src = s.cover; img.className = 'wall-item'; col.appendChild(img);
                 });
@@ -570,7 +567,7 @@
             }
         };
 
-        // App Start
+        // Start
         initWall();
         initSession();
 
