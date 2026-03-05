@@ -264,7 +264,7 @@
         const db = getFirestore(app);
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'echostream-default';
 
-        // --- DATABASE LOCAL ---
+        // --- DATABASE LOCAL (MOCK) ---
         const library = [
             { id: 1, title: "Shucks", artist: "Original", url: "https://files.catbox.moe/4xk880.m4a", cover: "https://files.catbox.moe/3pdjcj.jpg" },
             { id: 2, title: "Ma'Oi", artist: "Extra", url: "https://files.catbox.moe/q0rw0k.mp3", cover: "https://files.catbox.moe/pkbotd.png" },
@@ -316,6 +316,7 @@
                     profile = { ...profile, ...snap.data() };
                     applyProfile();
                 } else {
+                    // Novo usuário
                     showConnectButton();
                 }
             }, (err) => console.error("Sync Error:", err));
@@ -356,6 +357,7 @@
             setAccent(profile.accent, false);
             updateFavUI();
             
+            // Se já tem dados, pula splash automaticamente
             if (document.getElementById('main-app').classList.contains('hidden-state')) {
                 enterApp();
             }
@@ -420,6 +422,7 @@
             document.getElementById('player-play-btn').innerHTML = isPlaying ? '<i class="fa-solid fa-pause text-2xl"></i>' : '<i class="fa-solid fa-play text-2xl ml-1"></i>';
             document.getElementById('mini-playing-anim').style.display = isPlaying ? 'block' : 'none';
             
+            // Mini metadata
             document.getElementById('mini-title').innerText = library[currentIdx].title;
             document.getElementById('mini-artist').innerText = library[currentIdx].artist;
             document.getElementById('mini-cover').src = library[currentIdx].cover;
@@ -479,19 +482,7 @@
         window.setAccent = (hex, save = true) => {
             profile.accent = hex;
             document.documentElement.style.setProperty('--app-accent', hex);
-            const glow = document.getElementById('glow-logo');
-            if(glow) glow.style.backgroundColor = hex + '44';
-            
-            // Alterar cor de botões e textos de destaque
-            const accentElements = document.querySelectorAll('.text-green-500');
-            accentElements.forEach(el => {
-                el.style.color = hex;
-            });
-            const bgAccentElements = document.querySelectorAll('.bg-green-500');
-            bgAccentElements.forEach(el => {
-                el.style.backgroundColor = hex;
-            });
-
+            document.getElementById('glow-logo').style.backgroundColor = hex + '44';
             if (save) saveProfile();
         };
 
@@ -521,7 +512,6 @@
         window.toggleFavorite = () => {
             if (currentIdx === -1) return;
             const id = library[currentIdx].id;
-            if (!profile.favorites) profile.favorites = [];
             const favs = profile.favorites;
             const index = favs.indexOf(id);
             if (index > -1) favs.splice(index, 1);
@@ -532,7 +522,7 @@
 
         const updateFavUI = () => {
             if (currentIdx === -1) return;
-            const isFav = profile.favorites?.includes(library[currentIdx].id);
+            const isFav = profile.favorites.includes(library[currentIdx].id);
             document.getElementById('fav-btn-large').style.color = isFav ? '#f43f5e' : '#52525b';
         };
 
@@ -575,7 +565,6 @@
         // --- SPLASH INITIALIZATION ---
         const initSplash = () => {
             const wall = document.getElementById('splash-wall');
-            if(!wall) return;
             for (let i = 0; i < 5; i++) {
                 const col = document.createElement('div');
                 col.className = `wall-column ${i % 2 === 0 ? 'up' : 'down'}`;
@@ -588,6 +577,7 @@
                 wall.appendChild(col);
             }
 
+            // Fake progress loading
             let p = 0;
             const interval = setInterval(() => {
                 p += Math.random() * 15;
@@ -595,15 +585,12 @@
                     p = 90;
                     clearInterval(interval);
                 }
-                const progress = document.getElementById('loader-progress');
-                if(progress) progress.style.width = p + '%';
+                document.getElementById('loader-progress').style.width = p + '%';
             }, 300);
         };
 
-        window.onload = () => {
-            initSplash();
-            initAuth();
-        };
+        initSplash();
+        initAuth();
 
     </script>
 </body>
