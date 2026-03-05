@@ -3,9 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>EchoStream | Vibe Infinita</title>
+    
+    <!-- Bibliotecas externas (serão cacheadas pelo Service Worker) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
         
@@ -125,10 +131,19 @@
         .tab-trigger.active { background: var(--app-accent); color: #000; }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
+        
+        /* Offline Indicator */
+        #offline-status {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: #ef4444; color: white; padding: 8px 16px; border-radius: 20px;
+            font-size: 10px; font-weight: 900; text-transform: uppercase; z-index: 1000;
+            display: none;
+        }
     </style>
 </head>
 <body class="safe-area-inset">
 
+    <div id="offline-status">Modo Offline Ativo</div>
     <div id="dynamic-bg-glow"></div>
 
     <!-- Splash Screen -->
@@ -316,6 +331,58 @@
     <audio id="audio-engine" playsinline crossorigin="anonymous"></audio>
 
     <script>
+        /**
+         * SERVICE WORKER INTEGRATION
+         * Cria o service worker dinamicamente para permitir funcionamento offline.
+         */
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = 'echostream-v1';
+                const ASSETS = [
+                    '/',
+                    'index.html',
+                    'https://cdn.tailwindcss.com',
+                    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+                    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap'
+                ];
+
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+                    );
+                });
+
+                self.addEventListener('fetch', event => {
+                    event.respondWith(
+                        caches.match(event.request).then(response => {
+                            // Retorna do cache se existir, senão busca na rede
+                            return response || fetch(event.request).then(fetchResponse => {
+                                // Se for uma música ou imagem, salva no cache para uso futuro offline
+                                if (event.request.url.includes('catbox.moe') || event.request.url.includes('cubeupload.com')) {
+                                    return caches.open(CACHE_NAME).then(cache => {
+                                        cache.put(event.request, fetchResponse.clone());
+                                        return fetchResponse;
+                                    });
+                                }
+                                return fetchResponse;
+                            });
+                        }).catch(() => {
+                            // Fallback caso falte rede e cache
+                            return caches.match('index.html');
+                        })
+                    );
+                });
+            `;
+
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl);
+        }
+
+        // Monitoramento de Conexão
+        window.addEventListener('online', () => document.getElementById('offline-status').style.display = 'none');
+        window.addEventListener('offline', () => document.getElementById('offline-status').style.display = 'block');
+
         const translations = {
             pt: {
                 tagline: "Som de Próxima Geração", connect_btn: "INICIAR SESSÃO", welcome_title: "Seu Perfil",
@@ -586,33 +653,17 @@
         function closeModal() { document.getElementById('donation-modal').classList.remove('active'); }
         function redirectToDonation() { window.open('https://livepix.gg/echostream', '_blank'); closeModal(); }
 
-        /**
-         * Logout: Retorna para a página inicial (Splash Screen)
-         * - Para a música se estiver tocando
-         * - Esconde o menu e o app
-         * - Reseta o input de nome
-         * - Mostra o Splash Screen novamente
-         */
         function handleLogout() {
-            // Parar áudio
             engine.pause();
             engine.src = "";
             isPlaying = false;
             currentIndex = -1;
             updateUI();
-            
-            // Fechar telas secundárias
             closeNowPlaying();
             toggleMenu();
-
-            // Esconder o App e Login
             document.getElementById('main-app').classList.add('hidden-state');
             document.getElementById('login-screen').classList.add('hidden-state');
-            
-            // Limpar input
             document.getElementById('username-input').value = "";
-
-            // Voltar para o Splash
             setTimeout(() => {
                 document.getElementById('main-app').style.display = 'none';
                 document.getElementById('login-screen').style.display = 'none';
@@ -646,7 +697,11 @@
             }
         }
 
-        window.onload = () => { initWall(); setLanguage('pt'); };
+        window.onload = () => { 
+            initWall(); 
+            setLanguage('pt');
+            if(!navigator.onLine) document.getElementById('offline-status').style.display = 'block';
+        };
     </script>
 </body>
 </html>
