@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -6,9 +7,8 @@
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>EchoStream | Vibe Infinita</title>
+    <title>EchoStream | Definitive Edition</title>
     
-    <!-- Bibliotecas externas (serão cacheadas pelo Service Worker) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -48,18 +48,13 @@
         }
 
         #dynamic-bg-glow {
-            position: fixed;
-            inset: 0;
+            position: fixed; inset: 0;
             background: radial-gradient(circle at 50% -20%, var(--app-accent), transparent 70%);
-            opacity: 0.15;
-            pointer-events: none;
-            z-index: 0;
-            transition: all 0.8s ease;
+            opacity: 0.15; pointer-events: none; z-index: 0; transition: all 0.8s ease;
         }
 
         .dynamic-grad { background: linear-gradient(var(--grad-dir), var(--grad-start), var(--grad-end)); }
         .text-accent { color: var(--app-accent); }
-        
         .glass { background: var(--card-bg); backdrop-filter: blur(25px); border: 1px solid var(--border-alpha); }
         .glass-dark { background: var(--bg-color); backdrop-filter: blur(15px); border-top: 1px solid var(--border-alpha); }
 
@@ -78,13 +73,18 @@
         @keyframes scrollDown { from { transform: translateY(-50%); } to { transform: translateY(0); } }
         .wall-item { width: 100%; aspect-ratio: 1/1; border-radius: 8px; object-fit: cover; background: #111; }
 
-        #now-playing-screen {
+        #now-playing-screen, #album-view {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100;
-            background: var(--bg-color);
-            transform: translateY(100%);
+            background: var(--bg-color); transform: translateY(100%);
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        #now-playing-screen.active { transform: translateY(0); }
+        #now-playing-screen.active, #album-view.active { transform: translateY(0); }
+
+        #album-hero-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 60%;
+            background-size: cover; background-position: center;
+            filter: blur(40px) brightness(0.3); opacity: 0.6; pointer-events: none;
+        }
 
         #visualizer { position: absolute; bottom: 0; left: 0; width: 100%; height: 40%; z-index: 0; opacity: 0.4; pointer-events: none; }
 
@@ -93,11 +93,11 @@
             position: absolute; inset: 0; transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s ease; 
             border-radius: 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.4); object-fit: cover; 
         }
+        .slide-active { transform: translateX(0) rotateY(0) scale(1); opacity: 1; }
         .slide-out-left { transform: translateX(-120%) rotateY(-30deg) scale(0.8); opacity: 0; }
         .slide-out-right { transform: translateX(120%) rotateY(30deg) scale(0.8); opacity: 0; }
         .slide-in-right { transform: translateX(120%) rotateY(30deg) scale(0.8); opacity: 0; }
         .slide-in-left { transform: translateX(-120%) rotateY(-30deg) scale(0.8); opacity: 0; }
-        .slide-active { transform: translateX(0) rotateY(0) scale(1); opacity: 1; }
 
         .seek-bar { -webkit-appearance: none; width: 100%; background: transparent; height: 30px; cursor: pointer; }
         .seek-bar::-webkit-slider-runnable-track { background: var(--border-alpha); height: 3px; border-radius: 10px; }
@@ -109,41 +109,21 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .modal-overlay { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); 
-            z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px;
-            opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
-        }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-
-        .color-dot { width: 34px; height: 34px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
-        .color-dot.active { border-color: var(--text-main); transform: scale(1.1); }
-        
-        .dir-btn { padding: 10px; background: var(--card-bg); border: 1px solid var(--border-alpha); border-radius: 10px; font-size: 8px; font-weight: 900; color: var(--text-main); text-transform: uppercase; }
-        .dir-btn.active { background: var(--app-accent); color: #000; border-color: var(--app-accent); }
-
-        .lang-btn { flex: 1; padding: 10px; background: var(--card-bg); border: 1px solid var(--border-alpha); border-radius: 10px; font-size: 10px; font-weight: 900; }
-        .lang-btn.active { background: var(--app-accent); color: #000; border-color: var(--app-accent); }
-
         /* Tabs Favoritos */
         .tabs-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 16px; margin-bottom: 24px; }
         .tab-trigger { flex: 1; padding: 10px; border-radius: 12px; font-size: 10px; font-weight: 900; color: var(--text-dim); transition: 0.3s; text-transform: uppercase; }
         .tab-trigger.active { background: var(--app-accent); color: #000; }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
-        
-        /* Offline Indicator */
-        #offline-status {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: #ef4444; color: white; padding: 8px 16px; border-radius: 20px;
-            font-size: 10px; font-weight: 900; text-transform: uppercase; z-index: 1000;
-            display: none;
-        }
+
+        .color-dot { width: 34px; height: 34px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .color-dot.active { border-color: var(--text-main); transform: scale(1.1); }
+        .dir-btn { padding: 10px; background: var(--card-bg); border: 1px solid var(--border-alpha); border-radius: 10px; font-size: 8px; font-weight: 900; color: var(--text-main); text-transform: uppercase; }
+        .dir-btn.active { background: var(--app-accent); color: #000; border-color: var(--app-accent); }
     </style>
 </head>
-<body class="safe-area-inset">
+<body>
 
-    <div id="offline-status">Modo Offline Ativo</div>
     <div id="dynamic-bg-glow"></div>
 
     <!-- Splash Screen -->
@@ -153,23 +133,21 @@
             <i class="fa-solid fa-compact-disc text-8xl text-green-500 animate-[spin_10s_linear_infinite] mb-6"></i>
             <h1 class="text-5xl font-black tracking-tighter mb-2 text-white uppercase italic">EchoStream</h1>
             <p class="text-zinc-500 text-[9px] tracking-[0.4em] mb-10 uppercase font-black" data-i18n="tagline">Som de Próxima Geração</p>
-            <button onclick="goToLogin()" class="w-full py-5 bg-white text-black font-black rounded-full shadow-2xl active:scale-95 transition-all text-sm" data-i18n="connect_btn">
-                INICIAR SESSÃO
-            </button>
+            <button onclick="goToLogin()" class="w-full py-5 bg-white text-black font-black rounded-full shadow-2xl active:scale-95 transition-all text-sm" data-i18n="connect_btn">INICIAR SESSÃO</button>
         </div>
     </div>
 
     <!-- Login Screen -->
     <div id="login-screen" class="hidden-state fixed inset-0 z-[190] bg-black flex items-center justify-center p-6 page-transition">
-        <div class="glass p-8 rounded-[2.5rem] w-full max-w-sm text-center">
-            <h2 class="text-2xl font-black mb-1 text-white" data-i18n="welcome_title">Seu Perfil</h2>
+        <div class="glass p-8 rounded-[2.5rem] w-full max-w-sm text-center text-white">
+            <h2 class="text-2xl font-black mb-1" data-i18n="welcome_title">Seu Perfil</h2>
             <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-6" data-i18n="welcome_sub">Como devemos te chamar?</p>
-            <input type="text" id="username-input" data-i18n-placeholder="name_placeholder" placeholder="Seu nome" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl mb-6 outline-none focus:border-green-500 text-center text-white">
+            <input type="text" id="username-input" data-i18n-placeholder="name_placeholder" placeholder="Seu nome" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl mb-6 outline-none focus:border-green-500 text-center">
             <button onclick="finishLogin()" class="w-full py-4 bg-green-500 text-black font-black rounded-xl active:scale-95 text-sm" data-i18n="enter_btn">ENTRAR</button>
         </div>
     </div>
 
-    <!-- Main App -->
+    <!-- Main App UI -->
     <div id="main-app" class="hidden-state h-screen flex flex-col page-transition relative z-10">
         <header class="h-20 flex items-center justify-between px-6 bg-black/5 backdrop-blur-xl border-b border-[var(--border-alpha)]">
             <div class="flex items-center gap-2">
@@ -178,10 +156,8 @@
                 </div>
                 <span class="font-black tracking-tighter text-xl uppercase italic">Echo</span>
             </div>
-            <button onclick="toggleMenu()" class="relative">
-                <div class="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center border border-[var(--border-alpha)] overflow-hidden">
-                    <span id="user-initial" class="text-sm font-black text-accent">?</span>
-                </div>
+            <button onclick="toggleMenu()" class="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center border border-[var(--border-alpha)]">
+                <span id="user-initial" class="text-sm font-black text-accent">?</span>
             </button>
         </header>
 
@@ -190,19 +166,29 @@
                 <p id="date-now" class="text-[var(--text-dim)] text-[8px] font-bold uppercase tracking-[0.3em] mb-2">Carregando...</p>
                 <h2 class="text-3xl font-black leading-tight"><span id="time-greeting">Olá</span>, <span class="text-accent text-3xl block" id="user-name-display">Convidado</span></h2>
             </div>
-            <div class="relative mb-8">
+
+            <!-- Álbuns -->
+            <section class="mb-10">
+                <h3 class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] mb-4">Álbuns & Playlists</h3>
+                <div id="horizontal-albums" class="flex gap-5 overflow-x-auto no-scrollbar"></div>
+            </section>
+
+            <!-- Busca -->
+            <div class="relative mb-10">
                 <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-dim)] text-sm"></i>
                 <input type="text" data-i18n-placeholder="search_placeholder" placeholder="Buscar som..." oninput="handleSearch(this.value)" class="w-full bg-[var(--card-bg)] border border-[var(--border-alpha)] py-3.5 pl-12 pr-4 rounded-xl outline-none text-[var(--text-main)]">
             </div>
+
+            <!-- Grid de Músicas -->
             <div id="grid-container" class="grid grid-cols-2 gap-4"></div>
         </main>
 
-        <!-- Mini Player -->
+        <!-- Player Compacto -->
         <footer id="mini-player" class="fixed bottom-0 left-0 right-0 h-24 glass-dark px-6 flex items-center justify-between z-[90]" onclick="openNowPlaying()">
             <div class="flex items-center gap-4 w-2/3 overflow-hidden">
                 <img id="mini-cover" src="" class="w-12 h-12 rounded-xl object-cover shadow-xl bg-zinc-900 flex-shrink-0">
                 <div class="truncate">
-                    <p id="mini-title" class="font-black text-sm truncate" data-i18n="select_song">Toque algo</p>
+                    <p id="mini-title" class="font-black text-sm truncate uppercase tracking-tighter" data-i18n="select_song">Toque algo</p>
                     <p id="mini-artist" class="text-[9px] text-[var(--text-dim)] uppercase tracking-widest font-bold truncate">EchoStream</p>
                 </div>
             </div>
@@ -212,7 +198,27 @@
         </footer>
     </div>
 
-    <!-- Player Expansível -->
+    <!-- Album View -->
+    <div id="album-view" class="flex flex-col">
+        <div id="album-hero-bg"></div>
+        <header class="relative p-6 flex justify-between items-center z-10">
+            <button onclick="closeAlbum()" class="w-10 h-10 rounded-xl bg-black/20 backdrop-blur-md flex items-center justify-center border border-white/10">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <p class="font-black text-[9px] uppercase tracking-[0.4em] opacity-40">Coleção</p>
+            <div class="w-10"></div>
+        </header>
+        <div class="relative z-10 flex flex-col items-center px-6 pt-2 pb-8 text-center">
+            <div class="w-48 h-48 rounded-3xl overflow-hidden shadow-2xl mb-6 border border-white/10">
+                <img id="album-cover-display" src="" class="w-full h-full object-cover">
+            </div>
+            <h2 id="album-title-display" class="text-3xl font-black tracking-tighter uppercase mb-1">---</h2>
+            <p id="album-artist-display" class="text-xs font-bold text-accent uppercase tracking-widest mb-2">---</p>
+        </div>
+        <div id="album-tracks-list" class="relative z-10 flex-1 bg-black/40 backdrop-blur-3xl rounded-t-[40px] p-6 overflow-y-auto no-scrollbar border-t border-white/5 space-y-2"></div>
+    </div>
+
+    <!-- Expanded Player -->
     <div id="now-playing-screen">
         <canvas id="visualizer"></canvas>
         <div class="relative z-10 flex flex-col items-center justify-between h-full p-6 pt-12 pb-10">
@@ -223,20 +229,17 @@
                     <i class="fa-solid fa-heart"></i>
                 </button>
             </div>
-            
             <div class="cover-container" id="large-cover-parent">
                 <img id="large-cover" src="" class="slide-cover slide-active">
             </div>
-
             <div class="w-full text-center px-2">
-                <h2 id="large-title" class="text-2xl font-black truncate mb-1">Música</h2>
+                <h2 id="large-title" class="text-2xl font-black truncate uppercase mb-1">Título</h2>
                 <p id="large-artist" class="text-accent font-black tracking-[0.1em] text-[10px] uppercase mb-4">Artista</p>
                 <button onclick="askGemini()" class="px-5 py-2 rounded-full border border-[var(--border-alpha)] bg-white/5 text-[9px] font-bold uppercase tracking-widest"><i class="fa-solid fa-wand-magic-sparkles text-accent mr-2"></i> Echo AI</button>
                 <div id="gemini-recs" class="bg-white/5 rounded-2xl p-4 border border-[var(--border-alpha)] text-left mt-4 hidden">
                     <p id="ai-response" class="text-[10px] text-zinc-300 leading-relaxed italic">"..."</p>
                 </div>
             </div>
-
             <div class="w-full px-4">
                 <input type="range" class="seek-bar" id="seek-slider" value="0" step="0.1" oninput="handleSeek(this.value)">
                 <div class="flex justify-between text-[10px] font-bold text-[var(--text-dim)] mt-1">
@@ -252,314 +255,118 @@
         </div>
     </div>
 
-    <!-- Menu Customização / Favoritos -->
-    <div id="side-menu" class="fixed top-0 right-0 w-[85%] max-w-xs h-full z-[150] bg-[var(--bg-color)] border-l border-[var(--border-alpha)] p-8 translate-x-full transition-transform duration-500 shadow-2xl overflow-hidden flex flex-col">
+    <!-- Side Menu / Options -->
+    <div id="side-menu" class="fixed top-0 right-0 w-[85%] max-w-xs h-full z-[150] bg-[var(--bg-color)] border-l border-[var(--border-alpha)] p-8 translate-x-full transition-transform duration-500 shadow-2xl flex flex-col">
         <div class="flex justify-between items-center mb-8">
             <h3 class="text-xl font-black uppercase italic" data-i18n="options_title">Opções</h3>
-            <button onclick="toggleMenu()"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <button onclick="toggleMenu()"><i class="fa-solid fa-xmark text-xl text-white"></i></button>
         </div>
-
         <nav class="tabs-nav">
-            <button onclick="showTab('style')" id="tab-btn-style" class="tab-trigger active" data-i18n="tab_style">Estilo</button>
-            <button onclick="showTab('favs')" id="tab-btn-favs" class="tab-trigger" data-i18n="tab_favs">Favoritos</button>
+            <button onclick="showTab('style')" id="tab-btn-style" class="tab-trigger active">Estilo</button>
+            <button onclick="showTab('favs')" id="tab-btn-favs" class="tab-trigger">Favoritos</button>
         </nav>
-
-        <div class="flex-1 overflow-y-auto no-scrollbar">
-            <!-- Aba Estilo -->
-            <div id="tab-style" class="tab-panel active space-y-8">
+        <div class="flex-1 overflow-y-auto no-scrollbar text-white">
+            <div id="tab-style" class="tab-panel active space-y-6">
                 <div>
-                    <p class="text-[10px] font-black text-[var(--text-dim)] uppercase mb-3" data-i18n="lang_label">Idioma</p>
+                    <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Idioma</p>
                     <div class="flex gap-2">
-                        <button onclick="setLanguage('pt')" id="lang-pt" class="lang-btn active">PT</button>
-                        <button onclick="setLanguage('en')" id="lang-en" class="lang-btn">EN</button>
-                        <button onclick="setLanguage('es')" id="lang-es" class="lang-btn">ES</button>
+                        <button onclick="setLanguage('pt')" id="lang-pt" class="lang-btn flex-1 py-2 bg-white/5 rounded-lg text-[10px] font-bold">PT</button>
+                        <button onclick="setLanguage('en')" id="lang-en" class="lang-btn flex-1 py-2 bg-white/5 rounded-lg text-[10px] font-bold">EN</button>
                     </div>
                 </div>
-
                 <div>
-                    <p class="text-[10px] font-black text-[var(--text-dim)] uppercase mb-3" data-i18n="base_theme">Tema Base</p>
-                    <div class="flex gap-3">
-                        <button onclick="setTheme('dark')" id="t-dark" class="flex-1 py-3 bg-zinc-900 text-white rounded-xl text-[10px] font-black border-2 border-transparent" data-i18n="theme_dark">PRETO</button>
-                        <button onclick="setTheme('light')" id="t-light" class="flex-1 py-3 bg-white text-black rounded-xl text-[10px] font-black border-2 border-transparent" data-i18n="theme_light">BRANCO</button>
-                    </div>
-                </div>
-
-                <div>
-                    <p class="text-[10px] font-black text-[var(--text-dim)] uppercase mb-3" data-i18n="accent_color">Cor de Destaque</p>
-                    <div class="grid grid-cols-4 gap-3 mb-4">
+                    <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Cor de Destaque</p>
+                    <div class="grid grid-cols-4 gap-3">
                         <div onclick="setColors('#22c55e', '#16a34a', this)" class="color-dot bg-green-500 active"></div>
                         <div onclick="setColors('#3b82f6', '#1d4ed8', this)" class="color-dot bg-blue-500"></div>
                         <div onclick="setColors('#f43f5e', '#be123c', this)" class="color-dot bg-rose-500"></div>
                         <div onclick="setColors('#a855f7', '#7e22ce', this)" class="color-dot bg-purple-500"></div>
                     </div>
-                    <input type="color" id="accent-picker" onchange="updateAccent(this.value)" value="#22c55e" class="w-full h-10 bg-transparent cursor-pointer rounded-xl block border-none">
-                </div>
-
-                <div>
-                    <p class="text-[10px] font-black text-[var(--text-dim)] uppercase mb-3" data-i18n="grad_pos">Sentido do Gradiente</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="setDir('to bottom', this)" class="dir-btn active">↓ BAIXO</button>
-                        <button onclick="setDir('to top', this)" class="dir-btn">↑ CIMA</button>
-                        <button onclick="setDir('to right', this)" class="dir-btn">→ DIREITA</button>
-                        <button onclick="setDir('to bottom right', this)" class="dir-btn">↘ DIAGONAL</button>
-                    </div>
                 </div>
             </div>
-
-            <!-- Aba Favoritos -->
             <div id="tab-favs" class="tab-panel space-y-4">
                 <div id="favorites-list" class="space-y-3"></div>
             </div>
         </div>
-
-        <button onclick="handleLogout()" class="mt-6 w-full py-4 rounded-xl border border-[var(--border-alpha)] text-[var(--text-dim)] font-bold text-[10px] uppercase" data-i18n="logout_btn">DESCONECTAR</button>
-    </div>
-
-    <!-- Modal Doação -->
-    <div id="donation-modal" class="modal-overlay">
-        <div class="glass p-8 rounded-[2.5rem] w-full max-w-sm text-center">
-            <i class="fa-solid fa-heart-pulse text-4xl text-red-500 mb-4"></i>
-            <h2 class="text-xl font-black mb-2">Gostou do App?</h2>
-            <p class="text-[var(--text-dim)] text-xs mb-8">Você ouviu 3 músicas! Ajude-nos a manter o EchoStream ativo.</p>
-            <div class="flex gap-3">
-                <button onclick="closeModal()" class="flex-1 py-4 rounded-xl border border-[var(--border-alpha)] text-xs font-bold">DEPOIS</button>
-                <button onclick="redirectToDonation()" class="flex-1 py-4 dynamic-grad text-black rounded-xl text-xs font-black shadow-lg">APOIAR</button>
-            </div>
-        </div>
+        <button onclick="handleLogout()" class="mt-6 py-4 rounded-xl border border-[var(--border-alpha)] text-[var(--text-dim)] font-bold text-[10px] uppercase">Encerrar Sessão</button>
     </div>
 
     <audio id="audio-engine" playsinline crossorigin="anonymous"></audio>
 
     <script>
-        /**
-         * SERVICE WORKER INTEGRATION
-         * Cria o service worker dinamicamente para permitir funcionamento offline.
-         */
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                const CACHE_NAME = 'echostream-v1';
-                const ASSETS = [
-                    '/',
-                    'index.html',
-                    'https://cdn.tailwindcss.com',
-                    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-                    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap'
-                ];
+        const forsakenCover = "https://files.catbox.moe/36ucwq.jpeg";
+        const forsakenArtist = "Echo Games";
 
-                self.addEventListener('install', event => {
-                    event.waitUntil(
-                        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
-                    );
-                });
-
-                self.addEventListener('fetch', event => {
-                    event.respondWith(
-                        caches.match(event.request).then(response => {
-                            // Retorna do cache se existir, senão busca na rede
-                            return response || fetch(event.request).then(fetchResponse => {
-                                // Se for uma música ou imagem, salva no cache para uso futuro offline
-                                if (event.request.url.includes('catbox.moe') || event.request.url.includes('cubeupload.com')) {
-                                    return caches.open(CACHE_NAME).then(cache => {
-                                        cache.put(event.request, fetchResponse.clone());
-                                        return fetchResponse;
-                                    });
-                                }
-                                return fetchResponse;
-                            });
-                        }).catch(() => {
-                            // Fallback caso falte rede e cache
-                            return caches.match('index.html');
-                        })
-                    );
-                });
-            `;
-
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl);
-        }
-
-        // Monitoramento de Conexão
-        window.addEventListener('online', () => document.getElementById('offline-status').style.display = 'none');
-        window.addEventListener('offline', () => document.getElementById('offline-status').style.display = 'block');
-
-        const translations = {
-            pt: {
-                tagline: "Som de Próxima Geração", connect_btn: "INICIAR SESSÃO", welcome_title: "Seu Perfil",
-                welcome_sub: "Como devemos te chamar?", name_placeholder: "Seu nome...", enter_btn: "ENTRAR",
-                options_title: "Opções", tab_style: "Estilo", tab_favs: "Favoritos", lang_label: "Idioma",
-                base_theme: "Tema Base", theme_dark: "PRETO", theme_light: "BRANCO", accent_color: "Cor de Destaque",
-                grad_pos: "Sentido do Gradiente", search_placeholder: "Buscar som...", select_song: "Toque algo",
-                playing_now: "Em Reprodução", logout_btn: "DESCONECTAR", greet_morning: "Bom dia",
-                greet_afternoon: "Boa tarde", greet_night: "Boa noite"
-            },
-            en: {
-                tagline: "Next Gen Sound", connect_btn: "START SESSION", welcome_title: "Your Profile",
-                welcome_sub: "What's your name?", name_placeholder: "Your name...", enter_btn: "ENTER",
-                options_title: "Options", tab_style: "Style", tab_favs: "Favorites", lang_label: "Language",
-                base_theme: "Base Theme", theme_dark: "DARK", theme_light: "LIGHT", accent_color: "Accent Color",
-                grad_pos: "Gradient Direction", search_placeholder: "Search sound...", select_song: "Play something",
-                playing_now: "Now Playing", logout_btn: "LOGOUT", greet_morning: "Good morning",
-                greet_afternoon: "Good afternoon", greet_night: "Good night"
-            },
-            es: {
-                tagline: "Sonido de Próxima Gen", connect_btn: "INICIAR SESIÓN", welcome_title: "Tu Perfil",
-                welcome_sub: "¿Cómo te llamas?", name_placeholder: "Tu nome...", enter_btn: "ENTRAR",
-                options_title: "Opciones", tab_style: "Estilo", tab_favs: "Favoritos", lang_label: "Idioma",
-                base_theme: "Tema Base", theme_dark: "OSCURO", theme_light: "CLARO", accent_color: "Color de Acento",
-                grad_pos: "Sentido del Gradiente", search_placeholder: "Buscar sonido...", select_song: "Toca algo",
-                playing_now: "En Reproducción", logout_btn: "DESCONECTAR", greet_morning: "Buen día",
-                greet_afternoon: "Buenas tardes", greet_night: "Buenas noches"
-            }
-        };
-
-        // Render Álbuns
-            document.getElementById('horizontal-albums').innerHTML = albums.map(a => `
-                <div class="flex-shrink-0 w-40 active:scale-95 transition-transform" onclick="openAlbum('${a.id}')">
-                    <img src="${a.cover}" class="w-full aspect-square object-cover rounded-2xl shadow-xl mb-3">
-                    <p class="font-black text-[11px] truncate uppercase tracking-tighter">${a.name}</p>
-                    <p class="text-[9px] text-zinc-500 font-bold uppercase">${a.artist}</p>
-                </div>
-            `).join('');
-
-        // LOGICA DE ÁLBUNS (A PARTE QUE VOCÊ PEDIU)
-        function openAlbum(albumId) {
-            const album = albums.find(a => a.id === albumId);
-            currentAlbumId = albumId;
-            const albumTracks = library.filter(t => t.albumId === albumId);
-
-            document.getElementById('album-hero-bg').style.backgroundImage = `url(${album.cover})`;
-            document.getElementById('album-title-display').innerText = album.name;
-            document.getElementById('album-artist-display').innerText = album.artist;
-            document.getElementById('album-meta-display').innerText = `${albumTracks.length} Faixas`;
-
-            document.getElementById('album-tracks-list').innerHTML = albumTracks.map((track) => `
-                <div class="track-row" onclick="playSpecific(${track.id}, true)">
-                    <div class="flex-1 overflow-hidden">
-                        <p class="font-black text-[13px] truncate">${track.title}</p>
-                        <p class="text-[9px] text-zinc-500 font-bold uppercase">${track.artist}</p>
-                    </div>
-                    <i class="fa-solid fa-play text-accent text-[10px]"></i>
-                </div>
-            `).join('');
-
-            <!-- Album Detail View -->
-    <div id="album-view" class="view-layer overflow-y-auto no-scrollbar pb-32">
-        <div id="album-hero-bg" class="album-hero">
-            <button onclick="closeAlbum()" class="absolute top-12 left-6 z-20 w-10 h-10 bg-black/40 rounded-full flex items-center justify-center border border-white/10 backdrop-blur-md">
-                <i class="fa-solid fa-chevron-left"></i>
-            </button>
-            <div class="relative z-10 w-full">
-                <p class="text-[9px] font-black uppercase tracking-[0.3em] text-white/60 mb-1">Álbum Completo</p>
-                <h2 id="album-title-display" class="text-4xl font-black tracking-tighter mb-2 italic leading-none">---</h2>
-                <div class="flex items-center gap-3">
-                    <span id="album-artist-display" class="text-xs font-bold text-accent uppercase">---</span>
-                    <span class="w-1 h-1 bg-white/30 rounded-full"></span>
-                    <span id="album-meta-display" class="text-xs text-white/50 font-bold uppercase">0 Faixas</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="px-6 py-6">
-            <button onclick="playAllFromAlbum()" class="w-full py-4 dynamic-grad text-black font-black rounded-2xl flex items-center justify-center gap-3 shadow-2xl mb-8 uppercase tracking-widest text-[10px]">
-                <i class="fa-solid fa-play"></i> Tocar Álbum
-            </button>
-            <div id="album-tracks-list" class="space-y-1"></div>
-        </div>
-    </div>
-
-            <!-- Álbuns em Destaque -->
-            <div class="mb-10" id="albums-section">
-                <h3 class="text-[10px] font-black tracking-widest text-[var(--text-dim)] uppercase mb-4" data-i18n="featured_albums">Álbuns em Destaque</h3>
-                <div id="horizontal-albums" class="flex gap-5 overflow-x-auto no-scrollbar pb-2"></div>
-            </div>
-
-                /* Album Hero */
-        .album-hero {
-            height: 45vh; position: relative; display: flex; align-items: flex-end; padding: 24px;
-            background-size: cover; background-position: center;
-        }
-        .album-hero::after {
-            content: ''; position: absolute; inset: 0;
-            background: linear-gradient(to bottom, transparent, var(--bg-color) 95%);
-        }
-
-        .track-row {
-            display: flex; align-items: center; gap: 16px; padding: 14px 20px;
-            border-bottom: 1px solid var(--border-alpha);
-        }
-        .track-row:active { background: rgba(255, 255, 255, 0.05); }
-
-        .modal-overlay { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); 
-            z-index: 300; display: flex; align-items: center; justify-content: center; padding: 20px;
-            opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
-        }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-
-        .color-dot { width: 34px; height: 34px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
-        .color-dot.active { border-color: var(--text-main); transform: scale(1.1); }
-        
-        .dir-btn { padding: 10px; background: var(--card-bg); border: 1px solid var(--border-alpha); border-radius: 10px; font-size: 8px; font-weight: 900; color: var(--text-main); text-transform: uppercase; }
-        .dir-btn.active { background: var(--app-accent); color: #000; border-color: var(--app-accent); }
-
-        .tabs-nav { display: flex; gap: 8px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 16px; margin-bottom: 24px; }
-        .tab-trigger { flex: 1; padding: 10px; border-radius: 12px; font-size: 10px; font-weight: 900; color: var(--text-dim); transition: 0.3s; text-transform: uppercase; }
-        .tab-trigger.active { background: var(--app-accent); color: #000; }
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-
-        #offline-status {
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            background: #ef4444; color: white; padding: 8px 16px; border-radius: 20px;
-            font-size: 10px; font-weight: 900; text-transform: uppercase; z-index: 1000;
-            display: none;
-        }
-
-        const library = [
-            { id: 100, title: "Friends no More Round 2", artist: "Remix", url: "https://files.catbox.moe/pck8cj.mp3", cover: "https://files.catbox.moe/y6bflx.jpg" },
-            { id: 101, title: "Hide n seek", artist: "Stealth", url: "https://files.catbox.moe/tly9ec.mp3", cover: "https://files.catbox.moe/rn6duv.jpg" },
-            { id: 102, title: "80 OR LESS (YCR OST)", artist: "YCR", url: "https://files.catbox.moe/tfikus.mp3", cover: "https://files.catbox.moe/rn6duv.jpg" },
-            { id: 103, title: "80 OR LESS [HILL.GYM]", artist: "Gym Mix", url: "https://files.catbox.moe/z9ea3t.mp3", cover: "https://files.catbox.moe/rn6duv.jpg" },
-            { id: 104, title: "80 OR LESS [HILL]", artist: "The Hill", url: "https://files.catbox.moe/36fzbc.mp3", cover: "https://files.catbox.moe/rn6duv.jpg" },
-            { id: 0, title: "I Miss The Quiet", artist: "Novo", url: "https://files.catbox.moe/75yncp.m4a", cover: "https://files.catbox.moe/23oo9u.jpeg" },
-            { id: 1, title: "Shucks", artist: "Original", url: "https://files.catbox.moe/4xk880.m4a", cover: "https://u.cubeupload.com/NickTeam/1200x630bb.jpg" },
-            { id: 2, title: "Ma'Oi", artist: "Extra (Cover)", url: "https://files.catbox.moe/q0rw0k.mp3", cover: "https://u.cubeupload.com/NickTeam/46SemTtulo2026022611.png" },
-            { id: 3, title: "ShucksV3", artist: "Extra", url: "https://files.catbox.moe/33m4oi.mp3", cover: "https://u.cubeupload.com/NickTeam/artworksKwQ22SYvsnqz.png" },
-            { id: 4, title: "ShucksV3 (Inst)", artist: "Instrumental", url: "https://files.catbox.moe/11exhe.mp3", cover: "https://u.cubeupload.com/NickTeam/artworksKwQ22SYvsnqz.png" },
-            { id: 5, title: "Shadow 4ever", artist: "Night Vibes", url: "https://files.catbox.moe/iq4bdr.mp3", cover: "https://u.cubeupload.com/NickTeam/artworks8pazLKnsfpNE.jpg" },
-            { id: 6, title: "Revenant", artist: "Epic Score", url: "https://files.catbox.moe/wo8ifq.mp3", cover: "https://u.cubeupload.com/NickTeam/images6.jpeg" },
-            { id: 7, title: "TRINITY ENCORE", artist: "Hybrid Remix", url: "https://files.catbox.moe/mvpw0g.mp3", cover: "https://u.cubeupload.com/NickTeam/cover.jpg" },
-            { id: 8, title: "Trinity", artist: "Hybrid Soul", url: "https://files.catbox.moe/7xobq4.mp3", cover: "https://u.cubeupload.com/NickTeam/cover.jpg" },
-            { id: 9, title: "Fallen Down", artist: "Lofi Retro", url: "https://files.catbox.moe/oer90g.mp3", cover: "https://u.cubeupload.com/NickTeam/UndertaleSoundtrack2.png" },
-            { id: 10, title: "Last Goodbye", artist: "Memory Lane", url: "https://files.catbox.moe/91q5ul.mp3", cover: "https://u.cubeupload.com/NickTeam/UndertaleSoundtrack2.png" }
+        const albums = [
+            { id: 'alb_forsaken', name: 'Forsaken, Vol. 1', artist: forsakenArtist, cover: forsakenCover },
+            { id: 'alb_hill', name: 'Hill Sessions', artist: 'Gym & Hill', cover: 'https://files.catbox.moe/rn6duv.jpg' },
+            { id: 'alb_extra', name: 'Extra Mixes', artist: 'NickTeam', cover: 'https://u.cubeupload.com/NickTeam/artworksKwQ22SYvsnqz.png' },
+            { id: 'alb_trinity', name: 'Trinity Project', artist: 'Various', cover: 'https://u.cubeupload.com/NickTeam/cover.jpg' }
         ];
 
-        let currentIndex = -1, isPlaying = false, audioCtx = null, analyzer, dataArray;
-        let favorites = new Set(), songsPlayedCount = 0, hasShownDonation = false, currentLang = 'pt';
+        // Biblioteca Unificada: Forsaken (27 músicas) + Clássicas
+        const library = [
+            // ÁLBUM FORSAKEN
+            { id: 1, albumId: 'alb_forsaken', title: "Damnation", artist: forsakenArtist, url: "https://files.catbox.moe/0x83iw.mp3", cover: forsakenCover },
+            { id: 2, albumId: 'alb_forsaken', title: "Kill For Mother", artist: forsakenArtist, url: "https://files.catbox.moe/frzqa3.mp3", cover: forsakenCover },
+            { id: 3, albumId: 'alb_forsaken', title: "Ready Or Not", artist: forsakenArtist, url: "https://files.catbox.moe/5clkq9.mp3", cover: forsakenCover },
+            { id: 4, albumId: 'alb_forsaken', title: "Viral Infection", artist: forsakenArtist, url: "https://files.catbox.moe/izkzc7.mp3", cover: forsakenCover },
+            { id: 5, albumId: 'alb_forsaken', title: "Domino Effect", artist: forsakenArtist, url: "https://files.catbox.moe/dc0vhe.mp3", cover: forsakenCover },
+            { id: 6, albumId: 'alb_forsaken', title: "Hotel Robloxia", artist: forsakenArtist, url: "https://files.catbox.moe/f8zap6.mp3", cover: forsakenCover },
+            { id: 7, albumId: 'alb_forsaken', title: "Shadows", artist: forsakenArtist, url: "https://files.catbox.moe/iqc6sq.mp3", cover: forsakenCover },
+            { id: 8, albumId: 'alb_forsaken', title: "Resting Place", artist: forsakenArtist, url: "https://files.catbox.moe/qc7gix.mp3", cover: forsakenCover },
+            { id: 9, albumId: 'alb_forsaken', title: "Sundowner", artist: forsakenArtist, url: "https://files.catbox.moe/3jz6sq.mp3", cover: forsakenCover },
+            { id: 10, albumId: 'alb_forsaken', title: "My Cool Bluu Tune!!!", artist: forsakenArtist, url: "https://files.catbox.moe/70lb0x.mp3", cover: forsakenCover },
+            { id: 11, albumId: 'alb_forsaken', title: "Cut-Throat Tea Party", artist: forsakenArtist, url: "https://files.catbox.moe/rfmz90.mp3", cover: forsakenCover },
+            { id: 12, albumId: 'alb_forsaken', title: "Debito Di Sonno", artist: forsakenArtist, url: "https://files.catbox.moe/v2pul3.mp3", cover: forsakenCover },
+            { id: 13, albumId: 'alb_forsaken', title: "Bad Faith", artist: forsakenArtist, url: "https://files.catbox.moe/oddbt2.mp3", cover: forsakenCover },
+            { id: 14, albumId: 'alb_forsaken', title: "One Stud Angel", artist: forsakenArtist, url: "https://files.catbox.moe/c56w3y.mp3", cover: forsakenCover },
+            { id: 15, albumId: 'alb_forsaken', title: "Don't Touch My Chainsaw", artist: forsakenArtist, url: "https://files.catbox.moe/bmefj1.mp3", cover: forsakenCover },
+            { id: 16, albumId: 'alb_forsaken', title: "The End Is Nigh", artist: forsakenArtist, url: "https://files.catbox.moe/60vrpi.mp3", cover: forsakenCover },
+            { id: 17, albumId: 'alb_forsaken', title: "Killer Vanity", artist: forsakenArtist, url: "https://files.catbox.moe/ilqx84.mp3", cover: forsakenCover },
+            { id: 18, albumId: 'alb_forsaken', title: "#ff9cae", artist: forsakenArtist, url: "https://files.catbox.moe/mj3xhr.mp3", cover: forsakenCover },
+            { id: 19, albumId: 'alb_forsaken', title: "Cool One", artist: forsakenArtist, url: "https://files.catbox.moe/mnah6r.mp3", cover: forsakenCover },
+            { id: 20, albumId: 'alb_forsaken', title: "Banana Bus Breakdown", artist: forsakenArtist, url: "https://files.catbox.moe/gxxqkv.mp3", cover: forsakenCover },
+            { id: 21, albumId: 'alb_forsaken', title: "Chimes Of The Lucid", artist: forsakenArtist, url: "https://files.catbox.moe/vbe1f6.mp3", cover: forsakenCover },
+            { id: 22, albumId: 'alb_forsaken', title: "Corrupted Reflection", artist: forsakenArtist, url: "https://files.catbox.moe/6hw806.mp3", cover: forsakenCover },
+            { id: 23, albumId: 'alb_forsaken', title: "Just Survivors And Killers", artist: forsakenArtist, url: "https://files.catbox.moe/o2ld71.mp3", cover: forsakenCover },
+            { id: 24, albumId: 'alb_forsaken', title: "Obsession", artist: forsakenArtist, url: "https://files.catbox.moe/885lay.mp3", cover: forsakenCover },
+            { id: 25, albumId: 'alb_forsaken', title: "Unreggcognizable", artist: forsakenArtist, url: "https://files.catbox.moe/qwv5kl.mp3", cover: forsakenCover },
+            { id: 26, albumId: 'alb_forsaken', title: "A Grave Soul (Now, Run)", artist: forsakenArtist, url: "https://files.catbox.moe/q4kydq.mp3", cover: forsakenCover },
+            { id: 27, albumId: 'alb_forsaken', title: "Plead", artist: forsakenArtist, url: "https://files.catbox.moe/9rpy6d.mp3", cover: forsakenCover },
+            
+            // MÚSICAS CLÁSSICAS
+            { id: 100, albumId: 'alb_hill', title: "Friends no More Round 2", artist: "Remix", url: "https://files.catbox.moe/pck8cj.mp3", cover: "https://files.catbox.moe/y6bflx.jpg" },
+            { id: 101, albumId: 'alb_hill', title: "Hide n seek", artist: "Stealth", url: "https://files.catbox.moe/tly9ec.mp3", cover: "https://files.catbox.moe/rn6duv.jpg" },
+            { id: 102, albumId: 'alb_hill', title: "80 OR LESS (YCR OST)", artist: "YCR", url: "https://files.catbox.moe/tfikus.mp3", cover: "https://files.catbox.moe/rn6duv.jpg" },
+            { id: 103, albumId: 'alb_hill', title: "80 OR LESS [HILL.GYM]", artist: "Gym Mix", url: "https://files.catbox.moe/z9ea3t.mp3", cover: "https://files.catbox.moe/rn6duv.jpg" },
+            { id: 104, albumId: 'alb_hill', title: "80 OR LESS [HILL]", artist: "The Hill", url: "https://files.catbox.moe/36fzbc.mp3", cover: "https://files.catbox.moe/rn6duv.jpg" },
+            { id: 105, albumId: 'alb_extra', title: "I Miss The Quiet", artist: "Novo", url: "https://files.catbox.moe/75yncp.m4a", cover: "https://files.catbox.moe/23oo9u.jpeg" },
+            { id: 106, albumId: 'alb_extra', title: "Shucks", artist: "Original", url: "https://files.catbox.moe/4xk880.m4a", cover: "https://u.cubeupload.com/NickTeam/1200x630bb.jpg" },
+            { id: 107, albumId: 'alb_extra', title: "Ma'Oi", artist: "Extra Cover", url: "https://files.catbox.moe/q0rw0k.mp3", cover: "https://u.cubeupload.com/NickTeam/46SemTtulo2026022611.png" },
+            { id: 108, albumId: 'alb_extra', title: "ShucksV3", artist: "NickTeam", url: "https://files.catbox.moe/33m4oi.mp3", cover: "https://u.cubeupload.com/NickTeam/artworksKwQ22SYvsnqz.png" },
+            { id: 109, albumId: 'alb_extra', title: "ShucksV3 (Inst)", artist: "NickTeam", url: "https://files.catbox.moe/11exhe.mp3", cover: "https://u.cubeupload.com/NickTeam/artworksKwQ22SYvsnqz.png" },
+            { id: 110, albumId: 'alb_extra', title: "Shadow 4ever", artist: "Vibes", url: "https://files.catbox.moe/iq4bdr.mp3", cover: "https://u.cubeupload.com/NickTeam/artworks8pazLKnsfpNE.jpg" },
+            { id: 111, albumId: 'alb_extra', title: "Revenant", artist: "Epic", url: "https://files.catbox.moe/wo8ifq.mp3", cover: "https://u.cubeupload.com/NickTeam/images6.jpeg" },
+            { id: 112, albumId: 'alb_trinity', title: "TRINITY ENCORE", artist: "Remix", url: "https://files.catbox.moe/mvpw0g.mp3", cover: "https://u.cubeupload.com/NickTeam/cover.jpg" },
+            { id: 113, albumId: 'alb_trinity', title: "Trinity", artist: "Original", url: "https://files.catbox.moe/7xobq4.mp3", cover: "https://u.cubeupload.com/NickTeam/cover.jpg" },
+            { id: 114, albumId: 'alb_trinity', title: "Fallen Down", artist: "Lofi", url: "https://files.catbox.moe/oer90g.mp3", cover: "https://u.cubeupload.com/NickTeam/UndertaleSoundtrack2.png" },
+            { id: 115, albumId: 'alb_trinity', title: "Last Goodbye", artist: "Retro", url: "https://files.catbox.moe/91q5ul.mp3", cover: "https://u.cubeupload.com/NickTeam/UndertaleSoundtrack2.png" }
+        ];
+
+        let currentIndex = -1, isPlaying = false, audioCtx = null, analyzer, dataArray, favorites = new Set(), currentLang = 'pt';
         const engine = document.getElementById('audio-engine'), apiKey = "";
+
+        const translations = {
+            pt: { tagline: "Som de Próxima Geração", connect_btn: "INICIAR SESSÃO", welcome_title: "Seu Perfil", welcome_sub: "Como devemos te chamar?", name_placeholder: "Seu nome...", enter_btn: "ENTRAR", options_title: "Opções", search_placeholder: "Buscar som...", select_song: "Toque algo", playing_now: "Em Reprodução", greet_morning: "Bom dia", greet_afternoon: "Boa tarde", greet_night: "Boa noite" },
+            en: { tagline: "Next Gen Sound", connect_btn: "START SESSION", welcome_title: "Your Profile", welcome_sub: "What's your name?", name_placeholder: "Your name...", enter_btn: "ENTER", options_title: "Options", search_placeholder: "Search sound...", select_song: "Play something", playing_now: "Now Playing", greet_morning: "Good morning", greet_afternoon: "Good afternoon", greet_night: "Good night" }
+        };
 
         function setLanguage(lang) {
             currentLang = lang;
-            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`lang-${lang}`).classList.add('active');
-            
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if(translations[lang][key]) el.innerText = translations[lang][key];
-            });
-            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-                const key = el.getAttribute('data-i18n-placeholder');
-                if(translations[lang][key]) el.placeholder = translations[lang][key];
-            });
-
-            if(!document.getElementById('main-app').classList.contains('hidden-state')) {
-                document.getElementById('time-greeting').innerText = getGreeting();
-            }
-        }
-
-        function updateAccent(hex) {
-            setColors(hex, hex + 'CC', document.querySelector('.color-dot.active'));
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('bg-green-500', b.id === `lang-${lang}`));
+            document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if(translations[lang][key]) el.innerText = translations[lang][key]; });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { const key = el.getAttribute('data-i18n-placeholder'); if(translations[lang][key]) el.placeholder = translations[lang][key]; });
         }
 
         function setColors(s, e, el) {
@@ -568,15 +375,12 @@
             document.documentElement.style.setProperty('--grad-end', e);
             document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
             if(el) el.classList.add('active');
-            document.getElementById('accent-picker').value = s;
             document.getElementById('dynamic-bg-glow').style.background = `radial-gradient(circle at 50% -20%, ${s}, transparent 70%)`;
         }
 
         function showTab(tab) {
-            document.querySelectorAll('.tab-trigger').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.getElementById(`tab-btn-${tab}`).classList.add('active');
-            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.querySelectorAll('.tab-trigger').forEach(b => b.classList.toggle('active', b.id === `tab-btn-${tab}`));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${tab}`));
             if(tab === 'favs') renderFavorites();
         }
 
@@ -584,56 +388,19 @@
             if(currentIndex === -1) return;
             const id = library[currentIndex].id;
             favorites.has(id) ? favorites.delete(id) : favorites.add(id);
-            updateFavStatus();
-        }
-
-        function updateFavStatus() {
-            const btn = document.getElementById('fav-btn-player');
-            if(currentIndex !== -1 && favorites.has(library[currentIndex].id)) {
-                btn.classList.add('text-red-500');
-            } else {
-                btn.classList.remove('text-red-500');
-            }
+            document.getElementById('fav-btn-player').classList.toggle('text-red-500', favorites.has(id));
         }
 
         function renderFavorites() {
             const list = document.getElementById('favorites-list');
-            if(favorites.size === 0) {
-                list.innerHTML = `<div class="text-center py-10 opacity-30 text-[10px] uppercase font-black">Vazio</div>`;
-                return;
-            }
+            if(favorites.size === 0) return list.innerHTML = `<p class="text-center opacity-30 text-[10px] uppercase font-black py-10">Vazio</p>`;
             list.innerHTML = library.filter(s => favorites.has(s.id)).map(s => `
-                <div class="flex items-center gap-3 p-3 glass rounded-xl" onclick="playTrackById(${s.id})">
+                <div class="flex items-center gap-3 p-3 glass rounded-xl" onclick="playTrack(${library.indexOf(s)})">
                     <img src="${s.cover}" class="w-10 h-10 rounded-lg object-cover">
-                    <div class="flex-1 overflow-hidden"><p class="font-bold text-[11px] truncate">${s.title}</p></div>
+                    <div class="flex-1 truncate"><p class="font-bold text-[11px]">${s.title}</p></div>
                     <i class="fa-solid fa-heart text-red-500 text-[10px]"></i>
                 </div>
             `).join('');
-        }
-
-        function playTrackById(id) {
-            const idx = library.findIndex(s => s.id === id);
-            playTrack(idx);
-            toggleMenu();
-        }
-
-        function setTheme(m) {
-            document.body.setAttribute('data-theme', m);
-            document.getElementById('t-dark').style.borderColor = m === 'dark' ? 'var(--app-accent)' : 'transparent';
-            document.getElementById('t-light').style.borderColor = m === 'light' ? 'var(--app-accent)' : 'transparent';
-        }
-
-        function setDir(d, el) {
-            document.documentElement.style.setProperty('--grad-dir', d);
-            document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
-        }
-
-        function getGreeting() {
-            const hour = new Date().getHours();
-            if (hour < 12) return translations[currentLang].greet_morning;
-            if (hour < 18) return translations[currentLang].greet_afternoon;
-            return translations[currentLang].greet_night;
         }
 
         function goToLogin() { document.getElementById('splash-screen').classList.add('hidden-state'); setTimeout(() => { document.getElementById('splash-screen').style.display='none'; document.getElementById('login-screen').classList.remove('hidden-state'); document.getElementById('login-screen').style.display='flex'; }, 600); }
@@ -642,22 +409,50 @@
             const name = document.getElementById('username-input').value.trim() || "User";
             document.getElementById('user-name-display').innerText = name;
             document.getElementById('user-initial').innerText = name[0].toUpperCase();
-            document.getElementById('time-greeting').innerText = getGreeting();
             document.getElementById('login-screen').classList.add('hidden-state');
-            const now = new Date();
-            document.getElementById('date-now').innerText = now.toLocaleString(currentLang === 'pt' ? 'pt-br' : 'en-us', {weekday:'long', day:'numeric', month:'long'});
-            setTimeout(() => { document.getElementById('login-screen').style.display='none'; document.getElementById('main-app').classList.remove('hidden-state'); renderLibrary(); }, 600);
+            document.getElementById('date-now').innerText = new Date().toLocaleDateString(currentLang === 'pt' ? 'pt-br' : 'en-us', {weekday:'long', day:'numeric', month:'long'});
+            setTimeout(() => { document.getElementById('login-screen').style.display='none'; document.getElementById('main-app').classList.remove('hidden-state'); renderHome(); }, 600);
         }
 
-        function renderLibrary() {
+        function renderHome() {
+            document.getElementById('horizontal-albums').innerHTML = albums.map(a => `
+                <div class="flex-shrink-0 w-36 active:scale-95 transition-transform" onclick="openAlbum('${a.id}')">
+                    <div class="w-full aspect-square rounded-2xl overflow-hidden shadow-xl mb-2 border border-white/5 bg-zinc-900">
+                        <img src="${a.cover}" class="w-full h-full object-cover">
+                    </div>
+                    <p class="font-black text-[9px] truncate uppercase tracking-tighter">${a.name}</p>
+                </div>
+            `).join('');
+
             document.getElementById('grid-container').innerHTML = library.map((s, i) => `
                 <div class="song-card p-3 rounded-2xl glass active:scale-95 transition-all" onclick="playTrack(${i})">
                     <img src="${s.cover}" class="w-full aspect-square object-cover rounded-xl mb-3">
-                    <p class="font-black truncate text-[11px]">${s.title}</p>
-                    <p class="text-[8px] text-[var(--text-dim)] font-bold truncate uppercase">${s.artist}</p>
+                    <p class="font-black truncate text-[10px] uppercase tracking-tighter">${s.title}</p>
+                    <p class="text-[8px] text-zinc-500 font-bold truncate uppercase">${s.artist}</p>
                 </div>
             `).join('');
         }
+
+        function openAlbum(id) {
+            const album = albums.find(a => a.id === id);
+            const tracks = library.filter(t => t.albumId === id);
+            document.getElementById('album-hero-bg').style.backgroundImage = `url(${album.cover})`;
+            document.getElementById('album-cover-display').src = album.cover;
+            document.getElementById('album-title-display').innerText = album.name;
+            document.getElementById('album-artist-display').innerText = album.artist;
+            document.getElementById('album-tracks-list').innerHTML = tracks.map(t => `
+                <div class="flex items-center p-3 rounded-2xl active:bg-white/5" onclick="playTrack(${library.indexOf(t)})">
+                    <div class="flex-1 truncate">
+                        <p class="font-black text-[11px] uppercase tracking-tighter">${t.title}</p>
+                        <p class="text-[8px] text-zinc-500 font-bold uppercase">${t.artist}</p>
+                    </div>
+                    <i class="fa-solid fa-play text-accent text-[10px]"></i>
+                </div>
+            `).join('');
+            document.getElementById('album-view').classList.add('active');
+        }
+
+        function closeAlbum() { document.getElementById('album-view').classList.remove('active'); }
 
         async function playTrack(i, dir = 'next') {
             if (!audioCtx) initAudioSystem();
@@ -674,6 +469,30 @@
                 document.getElementById('gemini-recs').classList.add('hidden');
             }
             engine.play().then(() => { isPlaying = true; updateUI(); }).catch(() => {});
+        }
+
+        function togglePlay() { if (currentIndex === -1) return playTrack(0); engine.paused ? engine.play() : engine.pause(); isPlaying = !engine.paused; updateUI(); }
+        
+        function updateUI() {
+            const icon = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
+            document.getElementById('mini-play-btn').innerHTML = icon;
+            document.getElementById('large-play-btn').innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play ml-1"></i>';
+            if(currentIndex !== -1) {
+                document.getElementById('mini-title').innerText = library[currentIndex].title;
+                document.getElementById('mini-artist').innerText = library[currentIndex].artist;
+                document.getElementById('mini-cover').src = library[currentIndex].cover;
+                document.getElementById('fav-btn-player').classList.toggle('text-red-500', favorites.has(library[currentIndex].id));
+            }
+        }
+
+        function animateTransition(song, dir) {
+            const img = document.getElementById('large-cover'), parent = document.getElementById('large-cover-parent');
+            const oldImg = img.cloneNode(); parent.appendChild(oldImg);
+            img.style.transition = 'none'; img.src = song.cover;
+            img.className = `slide-cover ${dir === 'next' ? 'slide-in-right' : 'slide-in-left'}`;
+            document.getElementById('large-title').innerText = song.title;
+            document.getElementById('large-artist').innerText = song.artist;
+            setTimeout(() => { oldImg.classList.add(dir === 'next' ? 'slide-out-left' : 'slide-out-right'); img.style.transition = ''; img.className = 'slide-cover slide-active'; setTimeout(() => oldImg.remove(), 800); }, 50);
         }
 
         function initAudioSystem() {
@@ -705,47 +524,19 @@
             render();
         }
 
-        function updateUI() {
-            const icon = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
-            document.getElementById('mini-play-btn').innerHTML = icon;
-            document.getElementById('large-play-btn').innerHTML = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play ml-1"></i>';
-            if(currentIndex !== -1) {
-                document.getElementById('mini-title').innerText = library[currentIndex].title;
-                document.getElementById('mini-artist').innerText = library[currentIndex].artist;
-                document.getElementById('mini-cover').src = library[currentIndex].cover;
-                updateFavStatus();
-            }
-        }
-
-        function animateTransition(song, dir) {
-            const img = document.getElementById('large-cover'), parent = document.getElementById('large-cover-parent');
-            const oldImg = img.cloneNode(); parent.appendChild(oldImg);
-            img.style.transition = 'none'; img.src = song.cover;
-            img.className = `slide-cover ${dir === 'next' ? 'slide-in-right' : 'slide-in-left'}`;
-            document.getElementById('large-title').innerText = song.title;
-            document.getElementById('large-artist').innerText = song.artist;
-            setTimeout(() => { oldImg.classList.add(dir === 'next' ? 'slide-out-left' : 'slide-out-right'); img.style.transition = ''; img.className = 'slide-cover slide-active'; setTimeout(() => oldImg.remove(), 800); }, 50);
-        }
-
         async function askGemini() {
             const box = document.getElementById('gemini-recs'), text = document.getElementById('ai-response');
             box.classList.remove('hidden'); text.innerText = "...";
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: `Curiosidade sobre ${library[currentIndex].title} - ${library[currentIndex].artist} em 1 frase.` }] }] })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `Diga algo sobre a música ${library[currentIndex].title}.` }] }] })
                 });
                 const data = await response.json();
-                text.innerText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Vibe detectada.";
-            } catch { text.innerText = "Offline."; }
+                text.innerText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Vibe excelente.";
+            } catch { text.innerText = "IA Offline."; }
         }
 
-        function togglePlay() { 
-            if (currentIndex === -1) return playTrack(0); 
-            engine.paused ? engine.play() : engine.pause(); 
-            isPlaying = !engine.paused; 
-            updateUI(); 
-        }
         function nextSong() { playTrack((currentIndex + 1) % library.length, 'next'); }
         function prevSong() { playTrack((currentIndex - 1 + library.length) % library.length, 'prev'); }
         function handleSeek(v) { if (currentIndex !== -1) engine.currentTime = (v / 100) * engine.duration; }
@@ -753,29 +544,8 @@
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('translate-x-full'); }
         function openNowPlaying() { if(currentIndex !== -1) document.getElementById('now-playing-screen').classList.add('active'); }
         function closeNowPlaying() { document.getElementById('now-playing-screen').classList.remove('active'); }
-        function closeModal() { document.getElementById('donation-modal').classList.remove('active'); }
-        function redirectToDonation() { window.open('https://livepix.gg/echostream', '_blank'); closeModal(); }
-
-        function handleLogout() {
-            engine.pause();
-            engine.src = "";
-            isPlaying = false;
-            currentIndex = -1;
-            updateUI();
-            closeNowPlaying();
-            toggleMenu();
-            document.getElementById('main-app').classList.add('hidden-state');
-            document.getElementById('login-screen').classList.add('hidden-state');
-            document.getElementById('username-input').value = "";
-            setTimeout(() => {
-                document.getElementById('main-app').style.display = 'none';
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('splash-screen').style.display = 'flex';
-                setTimeout(() => {
-                    document.getElementById('splash-screen').classList.remove('hidden-state');
-                }, 50);
-            }, 600);
-        }
+        function handleLogout() { location.reload(); }
+        function formatTime(s) { if (isNaN(s)) return "0:00"; const m = Math.floor(s/60), r = Math.floor(s%60); return `${m}:${r < 10 ? '0' : ''}${r}`; }
 
         engine.ontimeupdate = () => {
             const p = (engine.currentTime / engine.duration) * 100 || 0;
@@ -783,28 +553,23 @@
             document.getElementById('time-current').innerText = formatTime(engine.currentTime);
             document.getElementById('time-total').innerText = formatTime(engine.duration);
         };
-        engine.onended = () => { songsPlayedCount++; if (songsPlayedCount === 3 && !hasShownDonation) { document.getElementById('donation-modal').classList.add('active'); hasShownDonation = true; } nextSong(); };
-        function formatTime(s) { if (isNaN(s)) return "0:00"; const m = Math.floor(s/60), r = Math.floor(s%60); return `${m}:${r < 10 ? '0' : ''}${r}`; }
-        
+        engine.onended = () => nextSong();
+
         function initWall() {
-            const wall = document.getElementById('splash-wall');
-            wall.innerHTML = '';
+            const wall = document.getElementById('splash-wall'); wall.innerHTML = '';
             for(let i=0; i<3; i++) {
                 const col = document.createElement('div');
                 col.className = `wall-column ${i%2==0?'up':'down'}`;
                 [...library, ...library].sort(() => Math.random() - 0.5).forEach(s => {
-                    const img = document.createElement('img');
-                    img.src = s.cover; img.className = 'wall-item'; col.appendChild(img);
+                    const img = document.createElement('img'); img.src = s.cover; img.className = 'wall-item'; col.appendChild(img);
                 });
                 wall.appendChild(col);
             }
         }
 
-        window.onload = () => { 
-            initWall(); 
-            setLanguage('pt');
-            if(!navigator.onLine) document.getElementById('offline-status').style.display = 'block';
-        };
+        window.onload = () => { initWall(); setLanguage('pt'); };
     </script>
 </body>
-        </html>
+</html>
+
+```
