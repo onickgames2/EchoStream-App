@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -399,9 +400,9 @@
         ];
 
         const albums = [
-            { id: "forsaken-v1", name: "Forsaken (OST) Vol. 1", artist: "Echo Games", cover: "https://files.catbox.moe/36ucwq.jpeg" },
-            { id: "trinity-pack", name: "Trinity Saga", artist: "Hybrid Soul", cover: "https://u.cubeupload.com/NickTeam/cover.jpg" },
-            { id: "undertale-pack", name: "Undertale Tribute", artist: "Toby Fox / Remix", cover: "https://u.cubeupload.com/NickTeam/UndertaleSoundtrack2.png" }
+            { id: "forsaken-v1", name: "Forsaken (OST) Vol. 1", artist: "Forsaken Sound Team", cover: "https://files.catbox.moe/36ucwq.jpeg" },
+            { id: "trinity-pack", name: "Trinity OST", artist: "Novo", cover: "https://u.cubeupload.com/NickTeam/cover.jpg" },
+            { id: "undertale-pack", name: "Undertale Soundtrack", artist: "Toby Fox / Remix", cover: "https://u.cubeupload.com/NickTeam/UndertaleSoundtrack2.png" }
         ];
 
         // ESTADO GLOBAL
@@ -659,4 +660,56 @@
             setTimeout(() => { oldImg.classList.add(dir === 'next' ? 'slide-out-left' : 'slide-out-right'); img.style.transition = ''; img.className = 'slide-cover slide-active'; setTimeout(() => oldImg.remove(), 800); }, 50);
         }
 
-        async function askGemini
+        async function askGemini() {
+            const box = document.getElementById('gemini-recs'), text = document.getElementById('ai-response');
+            box.classList.remove('hidden'); text.innerText = "...";
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `Dê uma curiosidade curta sobre a música ${currentQueue[currentIndex].title} de ${currentQueue[currentIndex].artist}.` }] }] })
+                });
+                const data = await response.json();
+                text.innerText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Vibe excelente.";
+            } catch { text.innerText = "IA Indisponível no momento."; }
+        }
+
+        function handleLogout() { window.location.reload(); }
+        function closeModal() { document.getElementById('donation-modal').classList.remove('active'); }
+        function redirectToDonation() { window.open('https://livepix.gg/echostream', '_blank'); closeModal(); }
+
+        // EVENTOS ÁUDIO
+        engine.ontimeupdate = () => {
+            const p = (engine.currentTime / engine.duration) * 100 || 0;
+            document.getElementById('seek-slider').value = p;
+            document.getElementById('time-current').innerText = formatTime(engine.currentTime);
+            document.getElementById('time-total').innerText = formatTime(engine.duration);
+        };
+
+        engine.onended = () => { 
+            songsPlayedCount++; 
+            if (songsPlayedCount === 3 && !hasShownDonation) { 
+                document.getElementById('donation-modal').classList.add('active'); 
+                hasShownDonation = true; 
+            } 
+            nextSong(); 
+        };
+
+        // INICIALIZAÇÃO WALLPAPER
+        window.onload = () => {
+            const wall = document.getElementById('splash-wall');
+            for(let i=0; i<3; i++) {
+                const col = document.createElement('div');
+                col.className = `wall-column ${i%2==0?'up':'down'}`;
+                [...library, ...library].sort(() => Math.random() - 0.5).forEach(s => {
+                    const img = document.createElement('img');
+                    img.src = s.cover; img.className = 'wall-item mb-2'; col.appendChild(img);
+                });
+                wall.appendChild(col);
+            }
+            setLanguage('pt');
+        };
+    </script>
+</body>
+</html>
+
+```
