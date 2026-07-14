@@ -69,4 +69,4 @@ Contribuições são sempre bem-vindas! Se você tem uma ideia para uma nova fun
 Este projeto está sob a licença MIT. Consulte o arquivo `LICENSE` para mais detalhes.
 
 ---
-Desenvolvido com 💜 por **NickTeam**
+Desenvolvido com 💛 por **NickTeam**
