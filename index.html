@@ -155,7 +155,8 @@
                 </div>
                 <span class="font-black tracking-tighter text-xl uppercase italic">Echo</span>
             </div>
-            <button onclick="toggleMenu()" class="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center border border-[var(--border-alpha)]">
+            <button onclick="toggleMenu()" id="profile-btn" class="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center border border-[var(--border-alpha)] overflow-hidden">
+                <img id="profile-pic-img" src="" class="w-full h-full object-cover hidden">
                 <span id="user-initial" class="text-sm font-black text-accent">?</span>
             </button>
         </header>
@@ -282,6 +283,41 @@
                         <div onclick="setColors('#a855f7', '#7e22ce', this)" class="color-dot bg-purple-500"></div>
                     </div>
                 </div>
+                <div>
+                    <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Cor Personalizada</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[8px] text-zinc-500 uppercase font-bold block mb-1">Início</label>
+                            <input type="color" id="grad-start-picker" value="#22c55e" onchange="setCustomColors()" class="w-full h-10 rounded-lg cursor-pointer bg-transparent">
+                        </div>
+                        <div>
+                            <label class="text-[8px] text-zinc-500 uppercase font-bold block mb-1">Fim</label>
+                            <input type="color" id="grad-end-picker" value="#16a34a" onchange="setCustomColors()" class="w-full h-10 rounded-lg cursor-pointer bg-transparent">
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Direção do Gradiente</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="setGradDir('to bottom', this)" id="dir-down" class="dir-btn active">Baixo</button>
+                        <button onclick="setGradDir('to top', this)" id="dir-up" class="dir-btn">Cima</button>
+                        <button onclick="setGradDir('to right', this)" id="dir-right" class="dir-btn">Lado</button>
+                    </div>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black text-zinc-500 uppercase tracking-widest mb-3">Foto de Perfil</p>
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-xl glass flex items-center justify-center overflow-hidden shrink-0">
+                            <img id="profile-pic-preview" src="" class="w-full h-full object-cover hidden">
+                            <span id="profile-pic-preview-initial" class="font-black text-lg text-[var(--text-dim)]">?</span>
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <input type="file" id="profile-pic-input" accept="image/*" class="hidden" onchange="handleProfilePicUpload(event)">
+                            <button onclick="document.getElementById('profile-pic-input').click()" class="w-full py-2.5 bg-white/5 border border-[var(--border-alpha)] rounded-lg text-[9px] font-black text-white uppercase tracking-widest">Escolher Foto</button>
+                            <button onclick="removeProfilePic()" class="w-full py-1.5 bg-transparent text-[var(--text-dim)] text-[9px] font-bold uppercase tracking-widest">Remover</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div id="tab-favs" class="tab-panel space-y-4">
                 <div id="favorites-list" class="space-y-3"></div>
@@ -368,13 +404,68 @@
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { const key = el.getAttribute('data-i18n-placeholder'); if(translations[lang][key]) el.placeholder = translations[lang][key]; });
         }
 
-        function setColors(s, e, el) {
+        function setColors(s, e, el, skipSave) {
             document.documentElement.style.setProperty('--app-accent', s);
             document.documentElement.style.setProperty('--grad-start', s);
             document.documentElement.style.setProperty('--grad-end', e);
             document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
             if(el) el.classList.add('active');
             document.getElementById('dynamic-bg-glow').style.background = `radial-gradient(circle at 50% -20%, ${s}, transparent 70%)`;
+            document.getElementById('grad-start-picker').value = s;
+            document.getElementById('grad-end-picker').value = e;
+            if(!skipSave) { localStorage.setItem('echo_grad_start', s); localStorage.setItem('echo_grad_end', e); }
+        }
+
+        function setCustomColors() {
+            const s = document.getElementById('grad-start-picker').value;
+            const e = document.getElementById('grad-end-picker').value;
+            setColors(s, e, null);
+        }
+
+        function setGradDir(dir, btn, skipSave) {
+            document.documentElement.style.setProperty('--grad-dir', dir);
+            document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+            if(!skipSave) localStorage.setItem('echo_grad_dir', dir);
+        }
+
+        function restoreAppearance() {
+            const s = localStorage.getItem('echo_grad_start');
+            const e = localStorage.getItem('echo_grad_end');
+            const dir = localStorage.getItem('echo_grad_dir');
+            if(s && e) setColors(s, e, null, true);
+            if(dir) {
+                const map = { 'to bottom': 'dir-down', 'to top': 'dir-up', 'to right': 'dir-right' };
+                setGradDir(dir, document.getElementById(map[dir]), true);
+            }
+        }
+
+        function handleProfilePicUpload(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                localStorage.setItem('echo_profile_pic', ev.target.result);
+                setProfilePic(ev.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setProfilePic(dataUrl) {
+            document.getElementById('profile-pic-img').src = dataUrl;
+            document.getElementById('profile-pic-img').classList.remove('hidden');
+            document.getElementById('user-initial').classList.add('hidden');
+            document.getElementById('profile-pic-preview').src = dataUrl;
+            document.getElementById('profile-pic-preview').classList.remove('hidden');
+            document.getElementById('profile-pic-preview-initial').classList.add('hidden');
+        }
+
+        function removeProfilePic() {
+            localStorage.removeItem('echo_profile_pic');
+            document.getElementById('profile-pic-img').classList.add('hidden');
+            document.getElementById('user-initial').classList.remove('hidden');
+            document.getElementById('profile-pic-preview').classList.add('hidden');
+            document.getElementById('profile-pic-preview-initial').classList.remove('hidden');
         }
 
         function showTab(tab) {
@@ -406,11 +497,28 @@
         
         function finishLogin() {
             const name = document.getElementById('username-input').value.trim() || "User";
+            localStorage.setItem('echo_username', name);
             document.getElementById('user-name-display').innerText = name;
             document.getElementById('user-initial').innerText = name[0].toUpperCase();
+            restoreAppearance();
+            const savedPic = localStorage.getItem('echo_profile_pic');
+            if(savedPic) setProfilePic(savedPic);
             document.getElementById('login-screen').classList.add('hidden-state');
             document.getElementById('date-now').innerText = new Date().toLocaleDateString(currentLang === 'pt' ? 'pt-br' : 'en-us', {weekday:'long', day:'numeric', month:'long'});
             setTimeout(() => { document.getElementById('login-screen').style.display='none'; document.getElementById('main-app').classList.remove('hidden-state'); renderHome(); }, 600);
+        }
+
+        function autoLogin(name) {
+            document.getElementById('splash-screen').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('user-name-display').innerText = name;
+            document.getElementById('user-initial').innerText = name[0].toUpperCase();
+            document.getElementById('date-now').innerText = new Date().toLocaleDateString(currentLang === 'pt' ? 'pt-br' : 'en-us', {weekday:'long', day:'numeric', month:'long'});
+            restoreAppearance();
+            const savedPic = localStorage.getItem('echo_profile_pic');
+            if(savedPic) setProfilePic(savedPic);
+            document.getElementById('main-app').classList.remove('hidden-state');
+            renderHome();
         }
 
         function renderHome() {
@@ -543,7 +651,7 @@
         function toggleMenu() { document.getElementById('side-menu').classList.toggle('translate-x-full'); }
         function openNowPlaying() { if(currentIndex !== -1) document.getElementById('now-playing-screen').classList.add('active'); }
         function closeNowPlaying() { document.getElementById('now-playing-screen').classList.remove('active'); }
-        function handleLogout() { location.reload(); }
+        function handleLogout() { localStorage.removeItem('echo_username'); localStorage.removeItem('echo_profile_pic'); location.reload(); }
         function formatTime(s) { if (isNaN(s)) return "0:00"; const m = Math.floor(s/60), r = Math.floor(s%60); return `${m}:${r < 10 ? '0' : ''}${r}`; }
 
         engine.ontimeupdate = () => {
@@ -566,8 +674,15 @@
             }
         }
 
-        window.onload = () => { initWall(); setLanguage('pt'); };
+        window.onload = () => {
+            setLanguage('pt');
+            const savedName = localStorage.getItem('echo_username');
+            if(savedName) {
+                autoLogin(savedName);
+            } else {
+                initWall();
+            }
+        };
     </script>
 </body>
 </html>
-
