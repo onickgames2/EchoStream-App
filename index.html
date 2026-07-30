@@ -119,6 +119,12 @@
         .color-dot.active { border-color: var(--text-main); transform: scale(1.1); }
         .dir-btn { padding: 10px; background: var(--card-bg); border: 1px solid var(--border-alpha); border-radius: 10px; font-size: 8px; font-weight: 900; color: var(--text-main); text-transform: uppercase; }
         .dir-btn.active { background: var(--app-accent); color: #000; border-color: var(--app-accent); }
+
+        /* Echo AI loading state */
+        .ai-loading-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--app-accent); margin-right: 3px; animation: aiPulse 1s infinite ease-in-out; }
+        .ai-loading-dot:nth-child(2) { animation-delay: 0.15s; }
+        .ai-loading-dot:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes aiPulse { 0%, 100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
     </style>
 </head>
 <body>
@@ -235,8 +241,8 @@
             <div class="w-full text-center px-2">
                 <h2 id="large-title" class="text-2xl font-black truncate uppercase mb-1">Título</h2>
                 <p id="large-artist" class="text-accent font-black tracking-[0.1em] text-[10px] uppercase mb-4">Artista</p>
-                <button onclick="askGemini()" class="px-5 py-2 rounded-full border border-[var(--border-alpha)] bg-white/5 text-[9px] font-bold uppercase tracking-widest"><i class="fa-solid fa-wand-magic-sparkles text-accent mr-2"></i> Echo AI</button>
-                <div id="gemini-recs" class="bg-white/5 rounded-2xl p-4 border border-[var(--border-alpha)] text-left mt-4 hidden">
+                <button onclick="askEchoAI()" class="px-5 py-2 rounded-full border border-[var(--border-alpha)] bg-white/5 text-[9px] font-bold uppercase tracking-widest"><i class="fa-solid fa-wand-magic-sparkles text-accent mr-2"></i> Echo AI</button>
+                <div id="ai-recs" class="bg-white/5 rounded-2xl p-4 border border-[var(--border-alpha)] text-left mt-4 hidden">
                     <p id="ai-response" class="text-[10px] text-zinc-300 leading-relaxed italic">"..."</p>
                 </div>
             </div>
@@ -390,7 +396,7 @@
         ];
 
         let currentIndex = -1, isPlaying = false, audioCtx = null, analyzer, dataArray, favorites = new Set(), currentLang = 'pt';
-        const engine = document.getElementById('audio-engine'), apiKey = "";
+        const engine = document.getElementById('audio-engine');
 
         const translations = {
             pt: { tagline: "Som de Próxima Geração", connect_btn: "INICIAR SESSÃO", welcome_title: "Seu Perfil", welcome_sub: "Como devemos te chamar?", name_placeholder: "Seu nome...", enter_btn: "ENTRAR", options_title: "Opções", search_placeholder: "Buscar som...", select_song: "Toque algo", playing_now: "Em Reprodução", greet_morning: "Bom dia", greet_afternoon: "Boa tarde", greet_night: "Boa noite" },
@@ -573,7 +579,7 @@
                 currentIndex = i;
                 engine.src = library[i].url;
                 engine.load();
-                document.getElementById('gemini-recs').classList.add('hidden');
+                document.getElementById('ai-recs').classList.add('hidden');
             }
             engine.play().then(() => { isPlaying = true; updateUI(); }).catch(() => {});
         }
@@ -631,17 +637,37 @@
             render();
         }
 
-        async function askGemini() {
-            const box = document.getElementById('gemini-recs'), text = document.getElementById('ai-response');
-            box.classList.remove('hidden'); text.innerText = "...";
+        // ---- Echo AI ----
+        // Antes chamava a API do Gemini com uma apiKey vazia, o que nunca funcionava.
+        // Agora usa a API da Anthropic diretamente, sem precisar de chave.
+        async function askEchoAI() {
+            const box = document.getElementById('ai-recs'), text = document.getElementById('ai-response');
+            if (currentIndex === -1) return;
+            const song = library[currentIndex];
+            box.classList.remove('hidden');
+            text.innerHTML = '<span class="ai-loading-dot"></span><span class="ai-loading-dot"></span><span class="ai-loading-dot"></span>';
+
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: `Diga algo sobre a música ${library[currentIndex].title}.` }] }] })
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-6",
+                        max_tokens: 200,
+                        messages: [{
+                            role: "user",
+                            content: `Em português do Brasil, escreva 2-3 frases curtas e envolventes sobre a faixa "${song.title}" do artista/projeto "${song.artist}". Fale sobre a vibe, o clima ou o tipo de momento pra ouvir essa música. Não invente fatos biográficos específicos (datas, prêmios, letras) — foque só na atmosfera e na sensação que a música passa.`
+                        }]
+                    })
                 });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                text.innerText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Vibe excelente.";
-            } catch { text.innerText = "IA Offline."; }
+                const reply = data.content?.find(b => b.type === "text")?.text;
+                text.innerText = reply || "Vibe excelente, vale o play.";
+            } catch (err) {
+                text.innerText = "Não consegui buscar a vibe agora. Tenta de novo em instantes.";
+            }
         }
 
         function nextSong() { playTrack((currentIndex + 1) % library.length, 'next'); }
