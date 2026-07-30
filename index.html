@@ -480,10 +480,29 @@
             if(tab === 'favs') renderFavorites();
         }
 
+        // ---- Favoritos persistentes (localStorage) ----
+        function loadFavorites() {
+            const saved = localStorage.getItem('echo_favorites');
+            favorites = saved ? new Set(JSON.parse(saved)) : new Set();
+        }
+
+        function saveFavorites() {
+            localStorage.setItem('echo_favorites', JSON.stringify([...favorites]));
+        }
+
+        // ---- Ponte com app nativo Android (se existir) ----
+        function notifyAndroid() {
+            if (window.EchoNative && currentIndex !== -1) {
+                const t = library[currentIndex];
+                window.EchoNative.updateNowPlaying(t.title, t.artist, isPlaying, t.cover);
+            }
+        }
+
         function toggleFavorite() {
             if(currentIndex === -1) return;
             const id = library[currentIndex].id;
             favorites.has(id) ? favorites.delete(id) : favorites.add(id);
+            saveFavorites();
             document.getElementById('fav-btn-player').classList.toggle('text-red-500', favorites.has(id));
         }
 
@@ -581,10 +600,16 @@
                 engine.load();
                 document.getElementById('ai-recs').classList.add('hidden');
             }
-            engine.play().then(() => { isPlaying = true; updateUI(); }).catch(() => {});
+            engine.play().then(() => { isPlaying = true; updateUI(); notifyAndroid(); }).catch(() => {});
         }
 
-        function togglePlay() { if (currentIndex === -1) return playTrack(0); engine.paused ? engine.play() : engine.pause(); isPlaying = !engine.paused; updateUI(); }
+        function togglePlay() {
+            if (currentIndex === -1) return playTrack(0);
+            engine.paused ? engine.play() : engine.pause();
+            isPlaying = !engine.paused;
+            updateUI();
+            notifyAndroid();
+        }
         
         function updateUI() {
             const icon = isPlaying ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
@@ -701,6 +726,7 @@
         }
 
         window.onload = () => {
+            loadFavorites();
             setLanguage('pt');
             const savedName = localStorage.getItem('echo_username');
             if(savedName) {
