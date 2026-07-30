@@ -651,7 +651,7 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: `Diga algo sobre a música ${library[currentIndex].title}.` }] }] })
                 });
                 const data = await response.json();
-                text.innerText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Vibe excelente.";
+                text.innerText = data.candidates?.[0]?.content?.parts?.[0]?.text || JSON.stringify(data.error || data);
             } catch { text.innerText = "IA Offline."; }
         }
 
