@@ -404,6 +404,32 @@
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { const key = el.getAttribute('data-i18n-placeholder'); if(translations[lang][key]) el.placeholder = translations[lang][key]; });
         }
 
+        function checkForNewReleases() {
+    if (typeof EchoNative === 'undefined' || !EchoNative.notifyNewRelease) return;
+    const known = JSON.parse(localStorage.getItem('echo_known_songs') || '[]');
+    if (known.length === 0) {
+        // primeira vez abrindo o app - só grava a lista atual, não notifica nada
+        localStorage.setItem('echo_known_songs', JSON.stringify(library.map(s => s.id)));
+        return;
+    }
+    const knownSet = new Set(known);
+    const newSongs = library.filter(s => !knownSet.has(s.id));
+    if (newSongs.length > 0) {
+        const knownAlbumIds = new Set(library.filter(s => knownSet.has(s.id)).map(s => s.albumId));
+        const first = newSongs[0];
+        const isNewAlbum = !knownAlbumIds.has(first.albumId);
+        let title, text;
+        if (newSongs.length === 1) {
+            title = isNewAlbum ? "Novo álbum disponível!" : "Nova faixa disponível!";
+            text = `${first.title} — ${first.artist}`;
+        } else {
+            title = "Novas faixas disponíveis!";
+            text = `${newSongs.length} novas músicas adicionadas`;
+        }
+        try { EchoNative.notifyNewRelease(title, text, first.cover); } catch (e) {}
+        localStorage.setItem('echo_known_songs', JSON.stringify(library.map(s => s.id)));
+    }
+        
         function setColors(s, e, el, skipSave) {
             document.documentElement.style.setProperty('--app-accent', s);
             document.documentElement.style.setProperty('--grad-start', s);
@@ -523,7 +549,7 @@
 
         function renderHome() {
             document.getElementById('horizontal-albums').innerHTML = albums.map(a => `
-                <div class="flex-shrink-0 w-36 active:scale-95 transition-transform" onclick="openAlbum('${a.id}')">
+                 <div class="flex-shrink-0 w-36 active:scale-95 transition-transform" onclick="openAlbum('${a.id}')">
                     <div class="w-full aspect-square rounded-2xl overflow-hidden shadow-xl mb-2 border border-white/5 bg-zinc-900">
                         <img src="${a.cover}" class="w-full h-full object-cover">
                     </div>
@@ -532,12 +558,13 @@
             `).join('');
 
             document.getElementById('grid-container').innerHTML = library.map((s, i) => `
-                <div class="song-card p-3 rounded-2xl glass active:scale-95 transition-all" onclick="playTrack(${i})">
+              <div class="song-card p-3 rounded-2xl glass active:scale-95 transition-all" onclick="playTrack(${i})">
                     <img src="${s.cover}" class="w-full aspect-square object-cover rounded-xl mb-3">
                     <p class="font-black truncate text-[10px] uppercase tracking-tighter">${s.title}</p>
                     <p class="text-[8px] text-zinc-500 font-bold truncate uppercase">${s.artist}</p>
                 </div>
             `).join('');
+            checkForNewReleases();
         }
 
         function openAlbum(id) {
