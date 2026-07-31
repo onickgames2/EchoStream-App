@@ -405,31 +405,32 @@
         }
 
         function checkForNewReleases() {
-    if (typeof EchoNative === 'undefined' || !EchoNative.notifyNewRelease) return;
-    const known = JSON.parse(localStorage.getItem('echo_known_songs') || '[]');
-    if (known.length === 0) {
-        // primeira vez abrindo o app - só grava a lista atual, não notifica nada
-        localStorage.setItem('echo_known_songs', JSON.stringify(library.map(s => s.id)));
-        return;
-    }
-    const knownSet = new Set(known);
-    const newSongs = library.filter(s => !knownSet.has(s.id));
-    if (newSongs.length > 0) {
-        const knownAlbumIds = new Set(library.filter(s => knownSet.has(s.id)).map(s => s.albumId));
-        const first = newSongs[0];
-        const isNewAlbum = !knownAlbumIds.has(first.albumId);
-        let title, text;
-        if (newSongs.length === 1) {
-            title = isNewAlbum ? "Novo álbum disponível!" : "Nova faixa disponível!";
-            text = `${first.title} — ${first.artist}`;
-        } else {
-            title = "Novas faixas disponíveis!";
-            text = `${newSongs.length} novas músicas adicionadas`;
+            if (typeof EchoNative === 'undefined' || !EchoNative.notifyNewRelease) return;
+            const known = JSON.parse(localStorage.getItem('echo_known_songs') || '[]');
+            if (known.length === 0) {
+                // primeira vez abrindo o app - só grava a lista atual, não notifica nada
+                localStorage.setItem('echo_known_songs', JSON.stringify(library.map(s => s.id)));
+                return;
+            }
+            const knownSet = new Set(known);
+            const newSongs = library.filter(s => !knownSet.has(s.id));
+            if (newSongs.length > 0) {
+                const knownAlbumIds = new Set(library.filter(s => knownSet.has(s.id)).map(s => s.albumId));
+                const first = newSongs[0];
+                const isNewAlbum = !knownAlbumIds.has(first.albumId);
+                let title, text;
+                if (newSongs.length === 1) {
+                    title = isNewAlbum ? "Novo álbum disponível!" : "Nova faixa disponível!";
+                    text = `${first.title} — ${first.artist}`;
+                } else {
+                    title = "Novas faixas disponíveis!";
+                    text = `${newSongs.length} novas músicas adicionadas`;
+                }
+                try { EchoNative.notifyNewRelease(title, text, first.cover); } catch (e) {}
+                localStorage.setItem('echo_known_songs', JSON.stringify(library.map(s => s.id)));
+            }
         }
-        try { EchoNative.notifyNewRelease(title, text, first.cover); } catch (e) {}
-        localStorage.setItem('echo_known_songs', JSON.stringify(library.map(s => s.id)));
-    }
-        
+
         function setColors(s, e, el, skipSave) {
             document.documentElement.style.setProperty('--app-accent', s);
             document.documentElement.style.setProperty('--grad-start', s);
