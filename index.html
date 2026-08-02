@@ -369,6 +369,8 @@
             { id: 25, albumId: 'alb_forsaken', title: "Unreggcognizable", artist: forsakenArtist, url: "https://files.catbox.moe/qwv5kl.mp3", cover: forsakenCover },
             { id: 26, albumId: 'alb_forsaken', title: "A Grave Soul (Now, Run)", artist: forsakenArtist, url: "https://files.catbox.moe/q4kydq.mp3", cover: forsakenCover },
             { id: 27, albumId: 'alb_forsaken', title: "Plead", artist: forsakenArtist, url: "https://files.catbox.moe/9rpy6d.mp3", cover: forsakenCover },
+            { id: 28, albumId: 'alb_forsaken', title: "Best Friends Forever", artist: forsakenArtist, url: "https://litter.catbox.moe/4so6tz6bc99muaws.mp3", cover: forsakenCover, expiresAt: "2026-08-05T23:59:59" },
+            { id: 29, albumId: 'alb_forsaken', title: "You And I", artist: forsakenArtist, url: "https://litter.catbox.moe/d88e2gjz6oywd635.mp3", cover: forsakenCover, expiresAt: "2026-08-05T23:59:59" },
             
             // MÚSICAS CLÁSSICAS
             { id: 100, albumId: 'alb_hill', title: "Friends no More Round 2", artist: "Astranova", url: "https://files.catbox.moe/pck8cj.mp3", cover: "https://files.catbox.moe/y6bflx.jpg" },
@@ -388,6 +390,12 @@
             { id: 114, albumId: 'alb_trinity', title: "Fallen Down", artist: "Toby Fox", url: "https://files.catbox.moe/oer90g.mp3", cover: "https://u.cubeupload.com/NickTeam/UndertaleSoundtrack2.png" },
             { id: 115, albumId: 'alb_trinity', title: "Last Goodbye", artist: "Toby Fox", url: "https://files.catbox.moe/91q5ul.mp3", cover: "https://u.cubeupload.com/NickTeam/UndertaleSoundtrack2.png" }
         ];
+
+        // Faixas com prazo de expiração (ex: "expiresAt") deixam de aparecer
+        // na biblioteca automaticamente após a data definida.
+        function isExpired(song) {
+            return !!song.expiresAt && Date.now() > new Date(song.expiresAt).getTime();
+        }
 
         let currentIndex = -1, isPlaying = false, audioCtx = null, analyzer, dataArray, favorites = new Set(), currentLang = 'pt';
         const engine = document.getElementById('audio-engine'), apiKey = "AIzaSyBUumFNeGb7DciDGJLXDeigTua8umg0VUc";
@@ -511,7 +519,7 @@
         function renderFavorites() {
             const list = document.getElementById('favorites-list');
             if(favorites.size === 0) return list.innerHTML = `<p class="text-center opacity-30 text-[10px] uppercase font-black py-10">Vazio</p>`;
-            list.innerHTML = library.filter(s => favorites.has(s.id)).map(s => `
+            list.innerHTML = library.filter(s => favorites.has(s.id) && !isExpired(s)).map(s => `
                 <div class="flex items-center gap-3 p-3 glass rounded-xl" onclick="playTrack(${library.indexOf(s)})">
                     <img src="${s.cover}" class="w-10 h-10 rounded-lg object-cover">
                     <div class="flex-1 truncate"><p class="font-bold text-[11px]">${s.title}</p></div>
@@ -558,7 +566,10 @@
                 </div>
             `).join('');
 
-            document.getElementById('grid-container').innerHTML = library.map((s, i) => `
+            document.getElementById('grid-container').innerHTML = library
+                .map((s, i) => ({ s, i }))
+                .filter(({ s }) => !isExpired(s))
+                .map(({ s, i }) => `
               <div class="song-card p-3 rounded-2xl glass active:scale-95 transition-all" onclick="playTrack(${i})">
                     <img src="${s.cover}" class="w-full aspect-square object-cover rounded-xl mb-3">
                     <p class="font-black truncate text-[10px] uppercase tracking-tighter">${s.title}</p>
@@ -570,7 +581,7 @@
 
         function openAlbum(id) {
             const album = albums.find(a => a.id === id);
-            const tracks = library.filter(t => t.albumId === id);
+            const tracks = library.filter(t => t.albumId === id && !isExpired(t));
             document.getElementById('album-hero-bg').style.backgroundImage = `url(${album.cover})`;
             document.getElementById('album-cover-display').src = album.cover;
             document.getElementById('album-title-display').innerText = album.name;
