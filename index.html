@@ -514,6 +514,7 @@
             const id = library[currentIndex].id;
             favorites.has(id) ? favorites.delete(id) : favorites.add(id);
             document.getElementById('fav-btn-player').classList.toggle('text-red-500', favorites.has(id));
+            localStorage.setItem('echo_favorites', JSON.stringify([...favorites]));
         }
 
         function renderFavorites() {
@@ -552,8 +553,28 @@
             restoreAppearance();
             const savedPic = localStorage.getItem('echo_profile_pic');
             if(savedPic) setProfilePic(savedPic);
+            favorites = new Set(JSON.parse(localStorage.getItem('echo_favorites') || '[]'));
+            restoreLastSong();
             document.getElementById('main-app').classList.remove('hidden-state');
             renderHome();
+        }
+
+        function restoreLastSong() {
+            const lastId = localStorage.getItem('echo_last_song');
+            if (!lastId) return;
+            const idx = library.findIndex(s => String(s.id) === String(lastId) && !isExpired(s));
+            if (idx === -1) return;
+            currentIndex = idx;
+            const song = library[idx];
+            document.getElementById('large-title').innerText = song.title;
+            document.getElementById('large-artist').innerText = song.artist;
+            document.getElementById('large-cover').src = song.cover;
+            document.getElementById('mini-title').innerText = song.title;
+            document.getElementById('mini-artist').innerText = song.artist;
+            document.getElementById('mini-cover').src = song.cover;
+            document.getElementById('fav-btn-player').classList.toggle('text-red-500', favorites.has(song.id));
+            engine.src = song.url;
+            engine.load();
         }
 
         function renderHome() {
@@ -610,6 +631,7 @@
                     document.getElementById('large-cover').src = library[i].cover;
                 }
                 currentIndex = i;
+                localStorage.setItem('echo_last_song', library[i].id);
                 engine.src = library[i].url;
                 engine.load();
                 document.getElementById('gemini-recs').classList.add('hidden');
