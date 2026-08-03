@@ -1,5 +1,5 @@
 {
-  "versionCode": 3,
+  "versionCode": 2,
   "versionName": "1.1",
   "apkUrl": "https://github.com/onickgames2/EchoStream/releases/download/EchoStream/EchoStream.apk",
   "changelog": "Notificação estilo Spotify, correção da foto de perfil, Echo AI funcionando, login persistente"
