@@ -643,18 +643,13 @@
 
         function togglePlay() { if (currentIndex === -1) return playTrack(0); engine.paused ? engine.play() : engine.pause(); isPlaying = !engine.paused; updateUI(); }
         
-        // ATUALIZADO: agora manda também a posição atual e a duração da faixa
-        // (em segundos, com decimais) pro lado nativo, pra alimentar a barra
-        // de progresso da notificação.
         function notifyNative() {
             if (typeof EchoNative === 'undefined' || !EchoNative.updateNowPlaying) return;
             const title = currentIndex !== -1 ? library[currentIndex].title : "EchoStream";
             const artist = currentIndex !== -1 ? library[currentIndex].artist : "Nada tocando";
             const art = currentIndex !== -1 ? library[currentIndex].cover : "";
-            const position = isNaN(engine.currentTime) ? 0 : engine.currentTime;
-            const duration = isNaN(engine.duration) ? 0 : engine.duration;
             try {
-                EchoNative.updateNowPlaying(title, artist, isPlaying, art, position, duration);
+                EchoNative.updateNowPlaying(title, artist, isPlaying, art);
             } catch (e) {}
         }
 
@@ -733,24 +728,11 @@
         function handleLogout() { localStorage.removeItem('echo_username'); localStorage.removeItem('echo_profile_pic'); location.reload(); }
         function formatTime(s) { if (isNaN(s)) return "0:00"; const m = Math.floor(s/60), r = Math.floor(s%60); return `${m}:${r < 10 ? '0' : ''}${r}`; }
 
-        // NOVO: controla a frequência de chamadas nativas durante o timeupdate,
-        // que dispara ~4x por segundo. Sem isso, mandaríamos Intent demais
-        // pro MusicService.
-        let lastNativeSync = 0;
-
         engine.ontimeupdate = () => {
             const p = (engine.currentTime / engine.duration) * 100 || 0;
             document.getElementById('seek-slider').value = p;
             document.getElementById('time-current').innerText = formatTime(engine.currentTime);
             document.getElementById('time-total').innerText = formatTime(engine.duration);
-
-            // NOVO: sincroniza a posição com a notificação a cada ~1s, só
-            // enquanto está tocando (evita spam de updates)
-            const now = Date.now();
-            if (isPlaying && now - lastNativeSync > 1000) {
-                lastNativeSync = now;
-                notifyNative();
-            }
         };
         engine.onended = () => nextSong();
 
